@@ -53,6 +53,7 @@ struct boost_drv {
 	atomic_t max_boost_dur;
 	atomic_t state;
 	spinlock_t lock;
+	int cpu;
 };
 
 static struct boost_drv *boost_drv_g;
@@ -120,7 +121,7 @@ void cpu_input_boost_kick(void)
 }
 
 static void __cpu_input_boost_kick_max(struct boost_drv *b,
-	unsigned int duration_ms)
+	unsigned int duration_ms, unsigned int cpu)
 {
 	unsigned long curr_expires, new_expires;
 
@@ -132,7 +133,7 @@ static void __cpu_input_boost_kick_max(struct boost_drv *b,
 			return;
 	} while (atomic64_cmpxchg(&b->max_boost_expires, curr_expires,
 		new_expires) != curr_expires);
-
+	b->cpu = cpu;
 	atomic_set(&b->max_boost_dur, duration_ms);
 	queue_work(b->wq, &b->max_boost);
 }
@@ -143,8 +144,18 @@ void cpu_input_boost_kick_max(unsigned int duration_ms)
 
 	if (!b)
 		return;
+	
+	__cpu_input_boost_kick_max(b, duration_ms, 0);
+}
 
-	__cpu_input_boost_kick_max(b, duration_ms);
+void cluster_input_boost_kick_max(unsigned int duration_ms, int cpu)
+{
+	struct boost_drv *b = boost_drv_g;
+
+	if (!b)
+		return;
+	
+	__cpu_input_boost_kick_max(b, duration_ms, cpu);
 }
 
 static void input_boost_worker(struct work_struct *work)
@@ -217,6 +228,7 @@ static int cpu_notifier_cb(struct notifier_block *nb,
 	struct boost_drv *b = container_of(nb, typeof(*b), cpu_notif);
 	struct cpufreq_policy *policy = data;
 	u32 boost_freq, min_freq, state;
+	bool do_boost = false;
 
 	if (action != CPUFREQ_ADJUST)
 		return NOTIFY_OK;
@@ -225,8 +237,11 @@ static int cpu_notifier_cb(struct notifier_block *nb,
 
 	/* Boost CPU to max frequency for max boost */
 	if (state & MAX_BOOST) {
-		policy->min = policy->max;
-		return NOTIFY_OK;
+		if (b->cpu = policy->cpu) {
+			policy->min = policy->max;
+			b->cpu = 9;
+			return NOTIFY_OK;
+		}
 	}
 
 	/*
@@ -258,7 +273,7 @@ static int fb_notifier_cb(struct notifier_block *nb,
 	/* Boost when the screen turns on and unboost when it turns off */
 	if (*blank == FB_BLANK_UNBLANK) {
 		set_boost_bit(b, SCREEN_AWAKE);
-		__cpu_input_boost_kick_max(b, CONFIG_WAKE_BOOST_DURATION_MS);
+		__cpu_input_boost_kick_max(b, CONFIG_WAKE_BOOST_DURATION_MS, 0);
 	} else {
 		clear_boost_bit(b, SCREEN_AWAKE);
 		unboost_all_cpus(b);
