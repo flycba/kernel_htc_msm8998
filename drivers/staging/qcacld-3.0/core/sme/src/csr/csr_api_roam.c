@@ -97,11 +97,6 @@
 #define ROAMING_OFFLOAD_TIMER_STOP	2
 #define CSR_ROAMING_OFFLOAD_TIMEOUT_PERIOD    (5 * QDF_MC_TIMER_TO_SEC_UNIT)
 
-<<<<<<< HEAD
-/* Static Type declarations */
-static tCsrRoamSession csr_roam_roam_session[CSR_ROAM_SESSION_MAX];
-
-=======
 /*
  * Neighbor report offload needs to send 0xFFFFFFFF if a particular
  * parameter is disabled from the ini
@@ -148,7 +143,6 @@ csr_get_ielen_from_bss_description(tpSirBssDescription pBssDescr)
 	return ielen;
 }
 
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 #ifdef FEATURE_WLAN_DIAG_SUPPORT_CSR
 int diag_auth_type_from_csr_type(eCsrAuthType authType)
 {
@@ -2126,11 +2120,8 @@ csr_fetch_ch_lst_from_received_list(tpAniSirGlobal mac_ctx,
 	}
 	req_buf->ConnectedNetwork.ChannelCount = num_channels;
 	req_buf->ChannelCacheType = CHANNEL_LIST_DYNAMIC_UPDATE;
-<<<<<<< HEAD
-=======
 	sme_debug("ChannelCacheType %dChannelCount %d",
 		  req_buf->ChannelCacheType, num_channels);
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 }
 
 /**
@@ -2364,8 +2355,6 @@ uint32_t csr_convert_phy_cb_state_to_ini_value(ePhyChanBondState phyCbState)
 	return cbIniValue;
 }
 
-<<<<<<< HEAD
-=======
 /**
  * csr_set_11k_offload_config_param() - Update 11k neighbor report config
  *
@@ -2400,7 +2389,6 @@ void csr_set_11k_offload_config_param(tCsrConfig *csr_config,
 		max_neighbor_report_req_cap;
 }
 
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 QDF_STATUS csr_change_default_config_param(tpAniSirGlobal pMac,
 					   tCsrConfigParam *pParam)
 {
@@ -2744,15 +2732,12 @@ QDF_STATUS csr_change_default_config_param(tpAniSirGlobal pMac,
 			pParam->max_amsdu_num;
 		pMac->roam.configParam.nSelect5GHzMargin =
 			pParam->nSelect5GHzMargin;
-<<<<<<< HEAD
-=======
 		pMac->roam.configParam.ho_delay_for_rx =
 			pParam->ho_delay_for_rx;
 		pMac->roam.configParam.min_delay_btw_roam_scans =
 			pParam->min_delay_btw_roam_scans;
 		pMac->roam.configParam.roam_trigger_reason_bitmask =
 			pParam->roam_trigger_reason_bitmask;
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 		pMac->roam.configParam.isCoalesingInIBSSAllowed =
 			pParam->isCoalesingInIBSSAllowed;
 #ifdef FEATURE_WLAN_MCC_TO_SCC_SWITCH
@@ -2913,27 +2898,19 @@ QDF_STATUS csr_change_default_config_param(tpAniSirGlobal pMac,
 			pParam->rssi_channel_penalization;
 		pMac->roam.configParam.num_disallowed_aps =
 			pParam->num_disallowed_aps;
-<<<<<<< HEAD
-=======
 		pMac->roam.configParam.roam_force_rssi_trigger =
 			pParam->roam_force_rssi_trigger;
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 
 		qdf_mem_copy(&pMac->roam.configParam.bss_score_params,
 			     &pParam->bss_score_params,
 			     sizeof(struct sir_score_config));
 
-<<<<<<< HEAD
-=======
 		csr_set_11k_offload_config_param(&pMac->roam.configParam,
 						 pParam);
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 	}
 	return status;
 }
 
-<<<<<<< HEAD
-=======
 /**
  * csr_get_11k_offload_config_param() - Get 11k neighbor report config
  *
@@ -2966,7 +2943,6 @@ void csr_get_11k_offload_config_param(tCsrConfig *csr_config,
 		max_neighbor_report_req_cap;
 }
 
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 QDF_STATUS csr_get_config_param(tpAniSirGlobal pMac, tCsrConfigParam *pParam)
 {
 	int i;
@@ -3084,13 +3060,10 @@ QDF_STATUS csr_get_config_param(tpAniSirGlobal pMac, tCsrConfigParam *pParam)
 			cfg_params->rx_ldpc_support_for_2g;
 	pParam->max_amsdu_num = cfg_params->max_amsdu_num;
 	pParam->nSelect5GHzMargin = cfg_params->nSelect5GHzMargin;
-<<<<<<< HEAD
-=======
 	pParam->ho_delay_for_rx = cfg_params->ho_delay_for_rx;
 	pParam->min_delay_btw_roam_scans = cfg_params->min_delay_btw_roam_scans;
 	pParam->roam_trigger_reason_bitmask =
 			cfg_params->roam_trigger_reason_bitmask;
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 	pParam->isCoalesingInIBSSAllowed = cfg_params->isCoalesingInIBSSAllowed;
 	pParam->allowDFSChannelRoam = cfg_params->allowDFSChannelRoam;
 	pParam->nInitialDwellTime = cfg_params->nInitialDwellTime;
@@ -3233,20 +3206,14 @@ QDF_STATUS csr_get_config_param(tpAniSirGlobal pMac, tCsrConfigParam *pParam)
 		pMac->roam.configParam.rssi_channel_penalization;
 	pParam->num_disallowed_aps =
 		pMac->roam.configParam.num_disallowed_aps;
-<<<<<<< HEAD
-=======
 	pParam->roam_force_rssi_trigger = cfg_params->roam_force_rssi_trigger;
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 
 	qdf_mem_copy(&pParam->bss_score_params,
 		&pMac->roam.configParam.bss_score_params,
 		sizeof(struct sir_score_config));
 
-<<<<<<< HEAD
-=======
 	csr_get_11k_offload_config_param(&pMac->roam.configParam, pParam);
 
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -3873,14 +3840,6 @@ QDF_STATUS csr_roam_call_callback(tpAniSirGlobal pMac, uint32_t sessionId,
 		pSession->connectedProfile.operationChannel =
 			pRoamInfo->channelChangeRespEvent->newChannelNumber;
 
-<<<<<<< HEAD
-	if (eCSR_ROAM_RESULT_LOSTLINK == u2 ||
-	    eCSR_ROAM_LOSTLINK_DETECTED == u1) {
-		sme_debug("eCSR_ROAM_RESULT_LOSTLINK ");
-	}
-
-=======
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 	if (NULL != pSession->callback) {
 		if (pRoamInfo) {
 			pRoamInfo->sessionId = (uint8_t) sessionId;
@@ -6857,13 +6816,10 @@ static void csr_roam_process_results_default(tpAniSirGlobal mac_ctx,
 		break;
 	case eCsrForcedDisassocSta:
 	case eCsrForcedDeauthSta:
-<<<<<<< HEAD
-=======
 		roam_info.rssi = mac_ctx->peer_rssi;
 		roam_info.tx_rate = mac_ctx->peer_txrate;
 		roam_info.rx_rate = mac_ctx->peer_rxrate;
 
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 		csr_roam_state_change(mac_ctx, eCSR_ROAMING_STATE_JOINED,
 			session_id);
 		session = CSR_GET_SESSION(mac_ctx, session_id);
@@ -6875,12 +6831,9 @@ static void csr_roam_process_results_default(tpAniSirGlobal mac_ctx,
 					cmd->u.roamCmd.peerMac,
 					sizeof(tSirMacAddr));
 			roam_info.reasonCode = eCSR_ROAM_RESULT_FORCED;
-<<<<<<< HEAD
-=======
 			/* Update the MAC reason code */
 			roam_info.disassoc_reason = cmd->u.roamCmd.reason;
 
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 			roam_info.statusCode = eSIR_SME_SUCCESS;
 			status = csr_roam_call_callback(mac_ctx, session_id,
 					&roam_info, cmd->u.roamCmd.roamId,
@@ -11452,14 +11405,11 @@ csr_roam_send_disconnect_done_indication(tpAniSirGlobal mac_ctx, tSirSmeRsp
 		roam_info.statusCode = eSIR_SME_STA_NOT_ASSOCIATED;
 		qdf_mem_copy(roam_info.peerMac.bytes, discon_ind->peer_mac,
 			     ETH_ALEN);
-<<<<<<< HEAD
-=======
 		roam_info.rssi = mac_ctx->peer_rssi;
 		roam_info.tx_rate = mac_ctx->peer_txrate;
 		roam_info.rx_rate = mac_ctx->peer_rxrate;
 		roam_info.disassoc_reason = discon_ind->reason_code;
 
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 		csr_roam_call_callback(mac_ctx, discon_ind->session_id,
 				       &roam_info, 0, eCSR_ROAM_LOSTLINK,
 				       eCSR_ROAM_RESULT_DISASSOC_IND);
@@ -11560,11 +11510,8 @@ csr_roam_chk_lnk_swt_ch_ind(tpAniSirGlobal mac_ctx, tSirSmeRsp *msg_ptr)
 	QDF_STATUS status;
 	tpSirSmeSwitchChannelInd pSwitchChnInd;
 	tCsrRoamInfo roamInfo;
-<<<<<<< HEAD
-=======
 	tSirMacDsParamSetIE *ds_params_ie;
 	tDot11fIEHTInfo *ht_info_ie;
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 
 	/* in case of STA, the SWITCH_CHANNEL originates from its AP */
 	sme_debug("eWNI_SME_SWITCH_CHL_IND from SME");
@@ -11587,8 +11534,6 @@ csr_roam_chk_lnk_swt_ch_ind(tpAniSirGlobal mac_ctx, tSirSmeRsp *msg_ptr)
 				(uint8_t) pSwitchChnInd->newChannelId;
 		}
 
-<<<<<<< HEAD
-=======
 		ds_params_ie = (tSirMacDsParamSetIE *)wlan_cfg_get_ie_ptr(
 					(uint8_t *)session->pConnectBssDesc->
 						ieFields,
@@ -11612,7 +11557,6 @@ csr_roam_chk_lnk_swt_ch_ind(tpAniSirGlobal mac_ctx, tSirSmeRsp *msg_ptr)
 				pSwitchChnInd->chan_params.sec_ch_offset;
 		}
 
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 		qdf_mem_set(&roamInfo, sizeof(tCsrRoamInfo), 0);
 		roamInfo.chan_info.chan_id = pSwitchChnInd->newChannelId;
 		roamInfo.chan_info.ch_width =
@@ -11797,16 +11741,10 @@ csr_roam_diag_joined_new_bss(tpAniSirGlobal mac_ctx,
 	pIbssLog->eventId = WLAN_IBSS_EVENT_COALESCING;
 	if (pNewBss) {
 		qdf_copy_macaddr(&pIbssLog->bssid, &pNewBss->bssId);
-<<<<<<< HEAD
-		if (pNewBss->ssId.length)
-			qdf_mem_copy(pIbssLog->ssid, pNewBss->ssId.ssId,
-				     pNewBss->ssId.length);
-=======
 		if (pNewBss->ssId.length > HOST_LOG_MAX_SSID_SIZE)
 			pNewBss->ssId.length = HOST_LOG_MAX_SSID_SIZE;
 		qdf_mem_copy(pIbssLog->ssid, pNewBss->ssId.ssId,
 			     pNewBss->ssId.length);
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 		pIbssLog->operatingChannel = pNewBss->channelNumber;
 	}
 	if (IS_SIR_STATUS_SUCCESS(wlan_cfg_get_int(mac_ctx,
@@ -12835,14 +12773,6 @@ QDF_STATUS csr_roam_lost_link(tpAniSirGlobal pMac, uint32_t sessionId,
 
 	sme_debug("RC: %d", roamInfo.reasonCode);
 
-<<<<<<< HEAD
-	if (type == eWNI_SME_DISASSOC_IND || type == eWNI_SME_DEAUTH_IND)
-		csr_roam_call_callback(pMac, sessionId, &roamInfo, 0,
-				       eCSR_ROAM_LOSTLINK_DETECTED, result);
-	else
-		csr_roam_call_callback(pMac, sessionId, NULL, 0,
-				       eCSR_ROAM_LOSTLINK_DETECTED, result);
-=======
 	if (type == eWNI_SME_DISASSOC_IND || type == eWNI_SME_DEAUTH_IND) {
 		struct sir_peer_info_req req;
 
@@ -12853,7 +12783,6 @@ QDF_STATUS csr_roam_lost_link(tpAniSirGlobal pMac, uint32_t sessionId,
 
 	csr_roam_call_callback(pMac, sessionId, NULL, 0,
 			       eCSR_ROAM_LOSTLINK_DETECTED, result);
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 
 	if (eWNI_SME_DISASSOC_IND == type)
 		status = csr_send_mb_disassoc_cnf_msg(pMac, pDisassocIndMsg);
@@ -14205,8 +14134,6 @@ static void csr_roam_update_connected_profile_from_new_bss(tpAniSirGlobal pMac,
 	}
 }
 
-<<<<<<< HEAD
-=======
 void csr_get_pmk_info(tpAniSirGlobal mac_ctx, uint8_t session_id,
 			  tPmkidCacheInfo *pmk_cache)
 {
@@ -14225,7 +14152,6 @@ void csr_get_pmk_info(tpAniSirGlobal mac_ctx, uint8_t session_id,
 					sizeof(session->psk_pmk));
 	pmk_cache->pmk_len = session->pmk_len;
 }
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 QDF_STATUS csr_roam_set_psk_pmk(tpAniSirGlobal pMac, uint32_t sessionId,
 				uint8_t *pPSK_PMK, size_t pmk_len)
@@ -18195,8 +18121,6 @@ csr_update_roam_scan_offload_request(tpAniSirGlobal mac_ctx,
 	req_buf->Prefer5GHz = mac_ctx->roam.configParam.nRoamPrefer5GHz;
 	req_buf->RoamRssiCatGap = mac_ctx->roam.configParam.bCatRssiOffset;
 	req_buf->Select5GHzMargin = mac_ctx->roam.configParam.nSelect5GHzMargin;
-<<<<<<< HEAD
-=======
 	req_buf->ho_delay_for_rx = mac_ctx->roam.configParam.ho_delay_for_rx;
 	req_buf->min_delay_btw_roam_scans =
 			mac_ctx->roam.configParam.min_delay_btw_roam_scans;
@@ -18205,7 +18129,6 @@ csr_update_roam_scan_offload_request(tpAniSirGlobal mac_ctx,
 	req_buf->roam_force_rssi_trigger =
 			mac_ctx->roam.configParam.roam_force_rssi_trigger;
 
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 	if (wlan_cfg_get_int(mac_ctx, WNI_CFG_REASSOCIATION_FAILURE_TIMEOUT,
 			     (uint32_t *) &req_buf->ReassocFailureTimeout)
 	    != eSIR_SUCCESS) {
@@ -18339,11 +18262,8 @@ csr_fetch_ch_lst_from_ini(tpAniSirGlobal mac_ctx,
 	}
 	req_buf->ConnectedNetwork.ChannelCount = num_channels;
 	req_buf->ChannelCacheType = CHANNEL_LIST_STATIC;
-<<<<<<< HEAD
-=======
 	sme_debug("ChannelCacheType %dChannelCount %d",
 		  req_buf->ChannelCacheType, num_channels);
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -18444,11 +18364,8 @@ csr_fetch_ch_lst_from_occupied_lst(tpAniSirGlobal mac_ctx,
 		else
 			req_buf->ChannelCacheType = CHANNEL_LIST_DYNAMIC_UPDATE;
 	}
-<<<<<<< HEAD
-=======
 	sme_debug("ChannelCacheType %dChannelCount %d",
 		  req_buf->ChannelCacheType, num_channels);
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 }
 
 /**
@@ -18550,18 +18467,10 @@ csr_fetch_valid_ch_lst(tpAniSirGlobal mac_ctx,
 	}
 	req_buf->ValidChannelCount = num_channels;
 
-<<<<<<< HEAD
-	if (CSR_IS_ROAM_INTRA_BAND_ENABLED(mac_ctx)) {
-		req_buf->ChannelCacheType = CHANNEL_LIST_STATIC;
-		req_buf->ConnectedNetwork.ChannelCount = num_channels;
-	}
-
-=======
 	req_buf->ChannelCacheType = CHANNEL_LIST_DYNAMIC_UPDATE;
 	req_buf->ConnectedNetwork.ChannelCount = num_channels;
 	sme_debug("ChannelCacheType %dChannelCount %d",
 		  req_buf->ChannelCacheType, num_channels);
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 	return status;
 }
 
@@ -18648,11 +18557,8 @@ csr_create_roam_scan_offload_request(tpAniSirGlobal mac_ctx,
 	req_buf->ConnectedNetwork.mcencryption =
 		mac_ctx->roam.roamSession[session_id].
 		connectedProfile.mcEncryptionType;
-<<<<<<< HEAD
-=======
 	/* Copy the RSN capabilities in roam offload request from session*/
 	req_buf->rsn_caps = session->rsn_caps;
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 #ifdef WLAN_FEATURE_11W
 	req_buf->ConnectedNetwork.mfp_enabled =
 	    mac_ctx->roam.roamSession[session_id].connectedProfile.MFPEnabled;
@@ -19491,8 +19397,6 @@ static void csr_update_score_params(tpAniSirGlobal mac_ctx,
 		bss_score_params->oce_wan_scoring.score_pcnt15_to_12;
 
 }
-<<<<<<< HEAD
-=======
 
 /**
  * csr_update_11k_offload_params - Update 11K offload params
@@ -19641,7 +19545,6 @@ QDF_STATUS csr_invoke_neighbor_report_request(uint8_t session_id,
 	return QDF_STATUS_SUCCESS;
 }
 
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 /**
  * csr_roam_offload_scan() - populates roam offload scan request and sends to
  * WMA
@@ -19866,8 +19769,6 @@ csr_roam_offload_scan(tpAniSirGlobal mac_ctx, uint8_t session_id,
 		csr_update_score_params(mac_ctx, req_buf);
 	}
 
-<<<<<<< HEAD
-=======
 	/*
 	 * 11k offload is enabled during RSO Start after connect indication and
 	 * 11k offload is disabled during RSO Stop after disconnect indication
@@ -19879,7 +19780,6 @@ csr_roam_offload_scan(tpAniSirGlobal mac_ctx, uint8_t session_id,
 		 reason == REASON_DISCONNECTED)
 		csr_update_11k_offload_params(mac_ctx, session, req_buf, FALSE);
 
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 	QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
 			"Assoc IE buffer:");
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
@@ -20578,12 +20478,8 @@ QDF_STATUS csr_roam_channel_change_req(tpAniSirGlobal pMac,
 	pMsg->targetChannel = profile->ChannelInfo.ChannelList[0];
 	pMsg->sec_ch_offset = ch_params->sec_ch_offset;
 	pMsg->ch_width = profile->ch_params.ch_width;
-<<<<<<< HEAD
-	pMsg->dot11mode = param.uCfgDot11Mode;
-=======
 	pMsg->dot11mode = csr_translate_to_wni_cfg_dot11_mode(pMac,
 				param.uCfgDot11Mode);
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 	if (IS_24G_CH(pMsg->targetChannel) &&
 	   (false == pMac->roam.configParam.enableVhtFor24GHz) &&
 	   (WNI_CFG_DOT11_MODE_11AC == pMsg->dot11mode ||
@@ -21686,13 +21582,6 @@ static QDF_STATUS csr_process_roam_sync_callback(tpAniSirGlobal mac_ctx,
 				eCSR_ROAM_NAPI_OFF, eCSR_ROAM_RESULT_SUCCESS);
 		return status;
 	case SIR_ROAMING_INVOKE_FAIL:
-<<<<<<< HEAD
-		csr_roam_call_callback(mac_ctx, session_id, NULL, 0,
-				       eCSR_ROAM_ASSOCIATION_FAILURE,
-				       eCSR_ROAM_RESULT_INVOKE_FAILED);
-
-=======
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 		/* Userspace roam request failed, disconnect with current AP */
 		sme_debug("LFR3: roam invoke from user-space fail, dis cur AP");
 		csr_roam_disconnect(mac_ctx, session_id,

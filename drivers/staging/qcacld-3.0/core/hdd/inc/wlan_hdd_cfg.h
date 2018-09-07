@@ -1,9 +1,5 @@
 /*
-<<<<<<< HEAD
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
-=======
  * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -2152,8 +2148,6 @@ enum hdd_dot11_mode {
 
 /*
  * <ini>
-<<<<<<< HEAD
-=======
  * min_delay_btw_roam_scans - Min duration (in sec) allowed btw two
  * consecutive roam scans
  * @Min: 0
@@ -2201,7 +2195,6 @@ enum hdd_dot11_mode {
 
 /*
  * <ini>
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
  * roam_bad_rssi_thresh_offset_2g - RSSI threshold offset for 2G to 5G roam
  * @Min: 0
  * @Max: 86
@@ -2232,8 +2225,6 @@ enum hdd_dot11_mode {
 
 /*
  * <ini>
-<<<<<<< HEAD
-=======
  * ho_delay_for_rx - Delay Hand-off (In msec) by this duration to receive
  * pending rx frames from current BSS
  * @Min: 0
@@ -2284,7 +2275,6 @@ enum hdd_dot11_mode {
 
 /*
  * <ini>
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
  * roamscan_adaptive_dwell_mode - Sets dwell time adaptive mode
  * @Min: 0
  * @Max: 4
@@ -8863,10 +8853,7 @@ enum dot11p_mode {
  *			scan policy disabled.
  * 4 - enable DBS for connection as well as for scan with async
  *			scan policy disabled.
-<<<<<<< HEAD
-=======
  * 5 - enable DBS for connection but disable dbs for scan.
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
  *
  * Note: INI item value should match 'enum dbs_support'
  *
@@ -8880,11 +8867,7 @@ enum dot11p_mode {
  */
 #define CFG_DUAL_MAC_FEATURE_DISABLE               "gDualMacFeatureDisable"
 #define CFG_DUAL_MAC_FEATURE_DISABLE_MIN          (0)
-<<<<<<< HEAD
-#define CFG_DUAL_MAC_FEATURE_DISABLE_MAX          (4)
-=======
 #define CFG_DUAL_MAC_FEATURE_DISABLE_MAX          (5)
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 #define CFG_DUAL_MAC_FEATURE_DISABLE_DEFAULT      (0)
 
 /*
@@ -11610,11 +11593,8 @@ enum hw_filter_mode {
  * <ini>
  * gActionOUIConnect1x1 - Used to specify action OUIs for 1x1 connection
  * @Default: 000C43 00 25 42 001018 06 02FFF02C0000 BC 25 42 001018 06 02FF040C0000 BC 25 42 00037F 00 35 6C
-<<<<<<< HEAD
-=======
  * Note: User should strictly add new action OUIs at the end of this
  * default value.
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
  *
  * Default OUIs: (All values in Hex)
  * OUI 1 : 000C43
@@ -11655,9 +11635,6 @@ enum hw_filter_mode {
 /*
  * <ini>
  * gActionOUIITOExtension - Used to extend in-activity time for specified APs
-<<<<<<< HEAD
- * @Default: Empty string
-=======
  * @Default: 00037F 06 01010000FF7F FC 01 000AEB 02 0100 C0 01
  * Note: User should strictly add new action OUIs at the end of this
  * default value.
@@ -11674,7 +11651,6 @@ enum hw_filter_mode {
  *   OUI Data: 0100
  *   OUI data Mask: C0 - 11000000
  *   Info Mask : 01 - only OUI present in Info mask
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
  *
  * This ini is used to specify AP OUIs using which station's in-activity time
  * can be extended with the respective APs
@@ -11688,11 +11664,7 @@ enum hw_filter_mode {
  * </ini>
  */
 #define CFG_ACTION_OUI_ITO_EXTENSION_NAME    "gActionOUIITOExtension"
-<<<<<<< HEAD
-#define CFG_ACTION_OUI_ITO_EXTENSION_DEFAULT ""
-=======
 #define CFG_ACTION_OUI_ITO_EXTENSION_DEFAULT "00037F 06 01010000FF7F FC 01 000AEB 02 0100 C0 01"
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 
 /*
  * <ini>
@@ -13140,8 +13112,6 @@ enum hw_filter_mode {
 #define CFG_CHAN_SWITCH_HOSTAPD_RATE_ENABLED_DEFAULT (0)
 
 
-<<<<<<< HEAD
-=======
 #define OFFLOAD_11K_BITMASK_NEIGHBOR_REPORT_REQUEST  0x1
 
 /*
@@ -13343,7 +13313,6 @@ enum hw_filter_mode {
 #define CFG_TX_SCH_DELAY_MAX           (5)
 #define CFG_TX_SCH_DELAY_DEFAULT       (2)
 
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 /*---------------------------------------------------------------------------
    Type declarations
    -------------------------------------------------------------------------*/
@@ -14004,12 +13973,9 @@ struct hdd_config {
 	uint32_t roam_dense_min_aps;
 	int8_t roam_bg_scan_bad_rssi_thresh;
 	uint8_t roam_bad_rssi_thresh_offset_2g;
-<<<<<<< HEAD
-=======
 	uint32_t ho_delay_for_rx;
 	uint32_t min_delay_btw_roam_scans;
 	uint32_t roam_trigger_reason_bitmask;
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 	uint32_t roam_bg_scan_client_bitmap;
 	bool enable_edca_params;
 	uint32_t edca_vo_cwmin;
@@ -14201,8 +14167,6 @@ struct hdd_config {
 	uint32_t oce_wan_score_slots15_to_12;
 	bool enable_scoring_for_roam;
 	bool chan_switch_hostapd_rate_enabled;
-<<<<<<< HEAD
-=======
 	bool is_11k_offload_supported;
 	uint32_t offload_11k_enable_bitmask;
 	uint32_t neighbor_report_offload_params_bitmask;
@@ -14214,7 +14178,6 @@ struct hdd_config {
 	uint32_t neighbor_report_offload_max_req_cap;
 	uint8_t enable_tx_sch_delay;
 	bool roam_force_rssi_trigger;
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 };
 
 #define VAR_OFFSET(_Struct, _Var) (offsetof(_Struct, _Var))

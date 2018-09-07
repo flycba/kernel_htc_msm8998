@@ -1,9 +1,5 @@
 /*
-<<<<<<< HEAD
- * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
-=======
  * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1142,10 +1138,6 @@ QDF_STATUS csr_neighbor_roam_indicate_connect(
 		csr_neighbor_roam_reset_init_state_control_info(pMac,
 			session_id);
 		csr_neighbor_roam_info_ctx_init(pMac, session_id);
-<<<<<<< HEAD
-
-=======
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 		return status;
 	}
 #endif

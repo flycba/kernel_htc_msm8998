@@ -1898,10 +1898,7 @@ __lim_process_sme_join_req(tpAniSirGlobal mac_ctx, uint32_t *msg_buf)
 		session->maxTxPower = lim_get_max_tx_power(reg_max,
 					local_power_constraint,
 					mac_ctx->roam.configParam.nTxPowerCap);
-<<<<<<< HEAD
-=======
 		session->def_max_tx_pwr = session->maxTxPower;
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 
 		pe_debug("Reg max %d local power con %d max tx pwr %d",
 			reg_max, local_power_constraint, session->maxTxPower);
@@ -4785,15 +4782,9 @@ static void lim_set_pdev_ht_ie(tpAniSirGlobal mac_ctx, uint8_t pdev_id,
 				ie_params->ie_len);
 
 		if (NSS_1x1_MODE == i) {
-<<<<<<< HEAD
-			p_ie = lim_get_ie_ptr_new(mac_ctx, ie_params->ie_ptr,
-					ie_params->ie_len,
-					DOT11F_EID_HTCAPS, ONE_BYTE);
-=======
 			p_ie = wlan_cfg_get_ie_ptr(ie_params->ie_ptr,
 						   ie_params->ie_len,
 						   DOT11F_EID_HTCAPS, ONE_BYTE);
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 			if (NULL == p_ie) {
 				qdf_mem_free(ie_params->ie_ptr);
 				qdf_mem_free(ie_params);
@@ -4865,16 +4856,10 @@ static void lim_set_pdev_vht_ie(tpAniSirGlobal mac_ctx, uint8_t pdev_id,
 				ie_params->ie_len);
 
 		if (NSS_1x1_MODE == i) {
-<<<<<<< HEAD
-			p_ie = lim_get_ie_ptr_new(mac_ctx, ie_params->ie_ptr,
-					ie_params->ie_len,
-					DOT11F_EID_VHTCAPS, ONE_BYTE);
-=======
 			p_ie = wlan_cfg_get_ie_ptr(ie_params->ie_ptr,
 						   ie_params->ie_len,
 						   DOT11F_EID_VHTCAPS,
 						   ONE_BYTE);
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 			if (NULL == p_ie) {
 				qdf_mem_free(ie_params->ie_ptr);
 				qdf_mem_free(ie_params);
@@ -6077,10 +6062,6 @@ skip_vht:
 	lim_send_chan_switch_action_frame(mac_ctx,
 		session_entry->gLimChannelSwitch.primaryChannel,
 		ch_offset, session_entry);
-<<<<<<< HEAD
-	session_entry->gLimChannelSwitch.switchCount--;
-=======
->>>>>>> 04a2031c251a... drivers: qcacld-3.0: Import LA.UM.6.4.r1-10300-8x98.0
 }
 
 /**
