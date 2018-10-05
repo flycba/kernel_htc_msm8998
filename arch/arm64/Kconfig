@@ -17,6 +17,8 @@ config ARM64
 	select ARCH_HAS_UBSAN_SANITIZE_ALL
 	select ARM_AMBA
 	select ARM_ARCH_TIMER
+	select HAVE_KERNEL_GZIP
+	select HAVE_KERNEL_LZ4
 	select ARM_GIC
 	select AUDIT_ARCH_COMPAT_GENERIC
 	select ARM_GIC_V2M if PCI_MSI
@@ -61,6 +63,7 @@ config ARM64
 	select HAVE_ARCH_SECCOMP_FILTER
 	select HAVE_ARCH_TRACEHOOK
 	select HAVE_BPF_JIT
+	select HAVE_EBPF_JIT
 	select HAVE_C_RECORDMCOUNT
 	select HAVE_CC_STACKPROTECTOR
 	select HAVE_CMPXCHG_DOUBLE
@@ -443,6 +446,20 @@ config ARM64_ERRATUM_843419
 
 	  If unsure, say Y.
 
+config ARM64_ERRATUM_1024718
+	bool "Cortex-A55: 1024718: Update of DBM/AP bits without break before make might result in incorrect update"
+	default y
+	help
+	  This option adds work around for Arm Cortex-A55 Erratum 1024718.
+
+	  Affected Cortex-A55 cores (r0p0, r0p1, r1p0) could cause incorrect
+	  update of the hardware dirty bit when the DBM/AP bits are updated
+	  without a break-before-make. The work around is to disable the usage
+	  of hardware DBM locally on the affected cores. CPUs not affected by
+	  erratum will continue to use the feature.
+
+	  If unsure, say Y.
+
 config CAVIUM_ERRATUM_22375
 	bool "Cavium erratum 22375, 24313"
 	default y
@@ -629,6 +646,19 @@ config SCHED_SMT
 	  MultiThreading at a cost of slightly increased overhead in some
 	  places. If unsure say N here.
 
+config HTC_POWER_DEBUG
+        bool "Support htc power debug feature"
+        help
+         Use this to enable htc power debug feature including pm statistics,
+         clock/gpio/qpnp pin dump, wakeup source, kerenl top and autosuspend
+         stage footprint
+
+config HTC_TSENS_CONTROLLER_1
+	bool "Support htc tsens controller num"
+	help
+	  Use this config to set TSEN CONTROLLER Number for common O80 branch.
+	  MSM8998 has 2 CONTROLLERs but sdm630 has 1.
+
 config NR_CPUS
 	int "Maximum number of CPUs (2-4096)"
 	range 2 4096
@@ -774,6 +804,23 @@ config FORCE_MAX_ZONEORDER
 
 	  However for 4K, we choose a higher default value, 11 as opposed to 10, giving us
 	  4M allocations matching the default size used by generic code.
+
+config HARDEN_BRANCH_PREDICTOR
+	bool "Harden the branch predictor against aliasing attacks" if EXPERT
+	default y
+	help
+	  Speculation attacks against some high-performance processors rely on
+	  being able to manipulate the branch predictor for a victim context by
+	  executing aliasing branches in the attacker context.  Such attacks
+	  can be partially mitigated against by clearing internal branch
+	  predictor state and limiting the prediction logic in some situations.
+
+	  This config option will take CPU-specific actions to harden the
+	  branch predictor against aliasing attacks and may rely on specific
+	  instruction sequences or control bits being set by the system
+	  firmware.
+
+	  If unsure, say Y.
 
 menuconfig ARMV8_DEPRECATED
 	bool "Emulate deprecated/obsolete ARMv8 instructions"
@@ -1062,6 +1109,8 @@ choice
 	  Image.gz to be used for final image creation.
 	  The image will built in arch/arm64/boot/IMAGE-NAME-dtb
 
+	config IMG_LZ4_DTB
+		bool "Image.lz4-dtb"
 	config IMG_GZ_DTB
 		bool "Image.gz-dtb"
 	config IMG_DTB
@@ -1071,6 +1120,7 @@ endchoice
 config BUILD_ARM64_APPENDED_KERNEL_IMAGE_NAME
 	string
 	depends on BUILD_ARM64_APPENDED_DTB_IMAGE
+	default "Image.lz4-dtb" if IMG_LZ4_DTB
 	default "Image.gz-dtb" if IMG_GZ_DTB
 	default "Image-dtb" if IMG_DTB
 
@@ -1095,7 +1145,7 @@ source "fs/Kconfig.binfmt"
 config COMPAT
 	bool "Kernel support for 32-bit EL0"
 	depends on ARM64_4K_PAGES || EXPERT
-	select COMPAT_BINFMT_ELF
+	select COMPAT_BINFMT_ELF if BINFMT_ELF
 	select HAVE_UID16
 	select OLD_SIGSUSPEND3
 	select COMPAT_OLD_SIGACTION
@@ -1164,3 +1214,5 @@ source "arch/arm64/crypto/Kconfig"
 endif
 
 source "lib/Kconfig"
+
+source "arch/arm64/Kconfig.htc"

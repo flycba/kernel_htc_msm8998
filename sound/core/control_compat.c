@@ -41,6 +41,11 @@ static int snd_ctl_elem_list_compat(struct snd_card *card,
 
 	data = compat_alloc_user_space(sizeof(*data));
 
+/* HTC_AUD_START Fix Klockwork */
+	if (data == NULL)
+		return -ENOMEM;
+/* HTC_AUD_END */
+
 	/* offset, space, used, count */
 	if (copy_in_user(data, data32, 4 * sizeof(u32)))
 		return -EFAULT;
@@ -400,8 +405,7 @@ static int snd_ctl_elem_add_compat(struct snd_ctl_file *file,
 	if (copy_from_user(&data->id, &data32->id, sizeof(data->id)) ||
 	    copy_from_user(&data->type, &data32->type, 3 * sizeof(u32)))
 		goto error;
-	if (get_user(data->owner, &data32->owner) ||
-	    get_user(data->type, &data32->type))
+	if (get_user(data->owner, &data32->owner))
 		goto error;
 	switch (data->type) {
 	case SNDRV_CTL_ELEM_TYPE_BOOLEAN:

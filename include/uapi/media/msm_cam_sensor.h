@@ -39,6 +39,8 @@
 
 #define MSM_V4L2_PIX_FMT_META v4l2_fourcc('M', 'E', 'T', 'A') /* META */
 #define MSM_V4L2_PIX_FMT_META10 v4l2_fourcc('M', 'E', '1', '0') /* META10 */
+#define MSM_V4L2_PIX_FMT_META12 v4l2_fourcc('M', 'E', '1', '2') /* META12 */
+
 #define MSM_V4L2_PIX_FMT_SBGGR14 v4l2_fourcc('B', 'G', '1', '4')
 	/* 14  BGBG.. GRGR.. */
 #define MSM_V4L2_PIX_FMT_SGBRG14 v4l2_fourcc('G', 'B', '1', '4')
@@ -229,6 +231,15 @@ struct camera_vreg_t {
 	enum camera_vreg_type type;
 };
 
+//HTC_START
+struct alpha_value{
+	uint8_t Alpha_Gb;
+	uint8_t Alpha_B;
+	uint8_t Alpha_R;
+	uint8_t Alpha_Gr;
+};
+//HTC_END
+
 struct sensorb_cfg_data {
 	int cfgtype;
 	union {
@@ -237,6 +248,9 @@ struct sensorb_cfg_data {
 		void                         *setting;
 		struct msm_sensor_i2c_sync_params sensor_i2c_sync_params;
 	} cfg;
+	//HTC_START
+	struct alpha_value alpha;
+	//HTC_END
 };
 
 struct csid_cfg_data {
@@ -345,6 +359,13 @@ enum msm_sensor_cfg_type_t {
 	CFG_WRITE_I2C_ARRAY_ASYNC,
 	CFG_WRITE_I2C_ARRAY_SYNC,
 	CFG_WRITE_I2C_ARRAY_SYNC_BLOCK,
+	/* HTC_START */
+	CFG_SET_GYRO_CALIBRATION,
+	CFG_SET_SENSOR_OIS_FREQ,
+	/* HTC_END */
+//HTC_START
+	CFG_READ_BLC,
+//HTC_END
 };
 
 enum msm_actuator_cfg_type_t {
@@ -356,6 +377,10 @@ enum msm_actuator_cfg_type_t {
 	CFG_ACTUATOR_POWERDOWN,
 	CFG_ACTUATOR_POWERUP,
 	CFG_ACTUATOR_INIT,
+	//HTC_START
+	CFG_ACTUATOR_OIS_GYRO_GAIN,
+	CFG_ACTUATOR_OIS_SSC_GAIN,
+	//HTC_END
 };
 
 struct msm_ois_opcode {
@@ -371,6 +396,7 @@ enum msm_ois_cfg_type_t {
 	CFG_OIS_POWERUP,
 	CFG_OIS_CONTROL,
 	CFG_OIS_I2C_WRITE_SEQ_TABLE,
+	CFG_OIS_GET_BEHAVIOR_STATUS, // HTC_ADD
 };
 
 enum msm_ois_cfg_download_type_t {
@@ -481,11 +507,20 @@ struct msm_ois_slave_info {
 	uint32_t i2c_addr;
 	struct msm_ois_opcode opcode;
 };
+
+//HTC_START
+struct ois_behavior_data {
+	struct timeval timestamp;
+	uint32_t data;
+};
+//HTC_END
+
 struct msm_ois_cfg_data {
 	int cfgtype;
 	union {
 		struct msm_ois_set_info_t set_info;
 		struct msm_camera_i2c_seq_reg_setting *settings;
+		struct ois_behavior_data behavior; //HTC_ADD
 	} cfg;
 };
 

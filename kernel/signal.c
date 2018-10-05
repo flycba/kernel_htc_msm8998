@@ -34,6 +34,7 @@
 #include <linux/compat.h>
 #include <linux/cn_proc.h>
 #include <linux/compiler.h>
+#include <linux/module.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/signal.h>
@@ -44,6 +45,7 @@
 #include <asm/siginfo.h>
 #include <asm/cacheflush.h>
 #include "audit.h"	/* audit_signal_info() */
+#include <htc_debug/stability/htc_process_debug.h>
 
 /*
  * SLAB caches for signal bits.
@@ -72,7 +74,7 @@ static int sig_task_ignored(struct task_struct *t, int sig, bool force)
 	handler = sig_handler(t, sig);
 
 	if (unlikely(t->signal->flags & SIGNAL_UNKILLABLE) &&
-			handler == SIG_DFL && !force)
+	    handler == SIG_DFL && !(force && sig_kernel_only(sig)))
 		return 1;
 
 	return sig_handler_ignored(handler, sig);
@@ -88,13 +90,15 @@ static int sig_ignored(struct task_struct *t, int sig, bool force)
 	if (sigismember(&t->blocked, sig) || sigismember(&t->real_blocked, sig))
 		return 0;
 
-	if (!sig_task_ignored(t, sig, force))
+	/*
+	 * Tracers may want to know about even ignored signal unless it
+	 * is SIGKILL which can't be reported anyway but can be ignored
+	 * by SIGNAL_UNKILLABLE task.
+	 */
+	if (t->ptrace && sig != SIGKILL)
 		return 0;
 
-	/*
-	 * Tracers may want to know about even ignored signals.
-	 */
-	return !t->ptrace;
+	return sig_task_ignored(t, sig, force);
 }
 
 /*
@@ -346,7 +350,7 @@ static bool task_participate_group_stop(struct task_struct *task)
 	 * fresh group stop.  Read comment in do_signal_stop() for details.
 	 */
 	if (!sig->group_stop_count && !(sig->flags & SIGNAL_STOP_STOPPED)) {
-		sig->flags = SIGNAL_STOP_STOPPED;
+		signal_set_stop_flags(sig, SIGNAL_STOP_STOPPED);
 		return true;
 	}
 	return false;
@@ -845,7 +849,7 @@ static bool prepare_signal(int sig, struct task_struct *p, bool force)
 			 * will take ->siglock, notice SIGNAL_CLD_MASK, and
 			 * notify its parent. See get_signal_to_deliver().
 			 */
-			signal->flags = why | SIGNAL_STOP_CONTINUED;
+			signal_set_stop_flags(signal, why | SIGNAL_STOP_CONTINUED);
 			signal->group_stop_count = 0;
 			signal->group_exit_code = 0;
 		}
@@ -917,9 +921,9 @@ static void complete_signal(int sig, struct task_struct *p, int group)
 	 * then start taking the whole group down immediately.
 	 */
 	if (sig_fatal(p, sig) &&
-	    !(signal->flags & (SIGNAL_UNKILLABLE | SIGNAL_GROUP_EXIT)) &&
+	    !(signal->flags & SIGNAL_GROUP_EXIT) &&
 	    !sigismember(&t->real_blocked, sig) &&
-	    (sig == SIGKILL || !t->ptrace)) {
+	    (sig == SIGKILL || !p->ptrace)) {
 		/*
 		 * This signal will be fatal to the whole group.
 		 */
@@ -1081,10 +1085,78 @@ ret:
 	return ret;
 }
 
+#if defined(CONFIG_HTC_DEBUG_DYING_PROCS)
+#include <linux/proc_fs.h>
+#include <linux/seq_file.h>
+#define MAX_DYING_PROC_COUNT (10)
+struct dying_pid {
+	pid_t pid;
+	unsigned long jiffy;
+};
+static DEFINE_SPINLOCK(dying_pid_lock);
+static int sigkill_pending(struct task_struct *tsk);
+static struct dying_pid dying_pid_buf[MAX_DYING_PROC_COUNT];
+static unsigned int dying_pid_buf_idx;
+
+static int proc_dying_processors_show(struct seq_file *m, void *v)
+{
+	unsigned long jiffy = jiffies;
+	unsigned long flags;
+	int i;
+
+	spin_lock_irqsave(&dying_pid_lock, flags);
+	for (i = 0; i < MAX_DYING_PROC_COUNT; i++)
+		if (dying_pid_buf[i].pid) {
+			seq_printf(m, "%ld:%ld\n",
+					(long int) dying_pid_buf[i].pid,
+					jiffy - dying_pid_buf[i].jiffy);
+		}
+	spin_unlock_irqrestore(&dying_pid_lock, flags);
+
+	return 0;
+}
+
+static int proc_dying_processors_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, proc_dying_processors_show, PDE_DATA(inode));
+}
+
+static const struct file_operations proc_dying_processors_fops = {
+	.open           = proc_dying_processors_open,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = single_release,
+};
+
+static int __init dying_processors_init(void)
+{
+	memset(dying_pid_buf, 0, sizeof(dying_pid_buf));
+	proc_create_data("dying_processes", 0, NULL,
+			&proc_dying_processors_fops, NULL);
+	return 0;
+}
+module_init(dying_processors_init);
+#endif
+
 static int send_signal(int sig, struct siginfo *info, struct task_struct *t,
 			int group)
 {
 	int from_ancestor_ns = 0;
+
+#ifdef CONFIG_HTC_PROCESS_DEBUG
+	send_signal_debug_dump(sig, t);
+#endif
+
+#if defined(CONFIG_HTC_DEBUG_DYING_PROCS)
+	if (sig == SIGKILL && !sigkill_pending(t)) {
+		unsigned long flags;
+		spin_lock_irqsave(&dying_pid_lock, flags);
+		dying_pid_buf_idx = ((dying_pid_buf_idx + 1) % MAX_DYING_PROC_COUNT);
+		dying_pid_buf[dying_pid_buf_idx].pid = t->pid;
+		dying_pid_buf[dying_pid_buf_idx].jiffy = jiffies;
+		spin_unlock_irqrestore(&dying_pid_lock, flags);
+	}
+#endif
 
 #ifdef CONFIG_PID_NS
 	from_ancestor_ns = si_fromuser(info) &&
@@ -1389,6 +1461,10 @@ static int kill_something_info(int sig, struct siginfo *info, pid_t pid)
 		rcu_read_unlock();
 		return ret;
 	}
+
+	/* -INT_MIN is undefined.  Exclude this case to avoid a UBSAN warning */
+	if (pid == INT_MIN)
+		return -ESRCH;
 
 	read_lock(&tasklist_lock);
 	if (pid != -1) {
@@ -2492,6 +2568,13 @@ void set_current_blocked(sigset_t *newset)
 void __set_current_blocked(const sigset_t *newset)
 {
 	struct task_struct *tsk = current;
+
+	/*
+	 * In case the signal mask hasn't changed, there is nothing we need
+	 * to do. The current->blocked shouldn't be modified by other task.
+	 */
+	if (sigequalsets(&tsk->blocked, newset))
+		return;
 
 	spin_lock_irq(&tsk->sighand->siglock);
 	__set_task_blocked(tsk, newset);

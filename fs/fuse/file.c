@@ -55,7 +55,7 @@ struct fuse_file *fuse_file_alloc(struct fuse_conn *fc)
 {
 	struct fuse_file *ff;
 
-	ff = kmalloc(sizeof(struct fuse_file), GFP_KERNEL);
+	ff = kzalloc(sizeof(struct fuse_file), GFP_KERNEL);
 	if (unlikely(!ff))
 		return NULL;
 
@@ -897,6 +897,7 @@ static int fuse_readpages_fill(void *_data, struct page *page)
 	}
 
 	if (WARN_ON(req->num_pages >= req->max_pages)) {
+		unlock_page(page);
 		fuse_put_request(fc, req);
 		return -EIO;
 	}
@@ -1235,6 +1236,7 @@ static ssize_t fuse_perform_write(struct file *file,
 	return res > 0 ? res : err;
 }
 
+extern void collect_io_stats(size_t rw_bytes, int type);
 static ssize_t fuse_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 {
 	struct file *file = iocb->ki_filp;
@@ -1277,6 +1279,7 @@ static ssize_t fuse_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 		goto out;
 	}
 
+	collect_io_stats(iov_iter_count(from), WRITE);
 	if (iocb->ki_flags & IOCB_DIRECT) {
 		loff_t pos = iocb->ki_pos;
 

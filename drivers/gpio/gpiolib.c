@@ -18,6 +18,9 @@
 #include <linux/pinctrl/consumer.h>
 
 #include "gpiolib.h"
+#ifdef CONFIG_HTC_POWER_DEBUG
+#include <linux/qpnp/pin.h>
+#endif
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/gpio.h>
@@ -2117,6 +2120,8 @@ struct gpio_desc *__must_check gpiod_get_index(struct device *dev,
 	struct gpio_desc *desc = NULL;
 	int status;
 	enum gpio_lookup_flags lookupflags = 0;
+	/* Maybe we have a device name, maybe not */
+	const char *devname = dev ? dev_name(dev) : "?";
 
 	dev_dbg(dev, "GPIO lookup for consumer %s\n", con_id);
 
@@ -2145,7 +2150,11 @@ struct gpio_desc *__must_check gpiod_get_index(struct device *dev,
 		return desc;
 	}
 
-	status = gpiod_request(desc, con_id);
+	/*
+	 * If a connection label was passed use that, else attempt to use
+	 * the device name as label
+	 */
+	status = gpiod_request(desc, con_id ? con_id : devname);
 	if (status < 0)
 		return ERR_PTR(status);
 
@@ -2527,11 +2536,59 @@ static const struct file_operations gpiolib_operations = {
 	.release	= seq_release,
 };
 
+#ifdef CONFIG_HTC_POWER_DEBUG
+static struct dentry *debugfs_base;
+
+static int list_gpios_show(struct seq_file *s, void *v)
+{
+	struct gpio_chip *chip = v;
+
+	if (chip->dbg_show) {
+		msm_dump_gpios(s, 0, NULL);
+		msm_dump_sdc(s, 0, NULL);
+		qpnp_pin_dump(s, 0, NULL);
+	}
+
+	return 0;
+}
+
+static const struct seq_operations htc_gpiolib_seq_ops = {
+	.start = gpiolib_seq_start,
+	.next = gpiolib_seq_next,
+	.stop = gpiolib_seq_stop,
+	.show = list_gpios_show,
+};
+
+static int list_gpios_open(struct inode *inode, struct file *file)
+{
+	printk("%s\n",__func__);
+	return seq_open(file, &htc_gpiolib_seq_ops);
+}
+
+static const struct file_operations list_gpios_fops = {
+	.open           = list_gpios_open,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = seq_release,
+};
+
+#endif
+
 static int __init gpiolib_debugfs_init(void)
 {
 	/* /sys/kernel/debug/gpio */
 	(void) debugfs_create_file("gpio", S_IFREG | S_IRUGO,
 				NULL, NULL, &gpiolib_operations);
+#ifdef CONFIG_HTC_POWER_DEBUG
+	debugfs_base = debugfs_create_dir("htc_gpio", NULL);
+	if (!debugfs_base)
+		return -ENOMEM;
+
+	if (!debugfs_create_file("list_gpios", S_IRUGO, debugfs_base,
+			NULL, &list_gpios_fops))
+		return -ENOMEM;
+
+#endif
 	return 0;
 }
 subsys_initcall(gpiolib_debugfs_init);

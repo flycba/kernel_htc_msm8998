@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -35,6 +35,9 @@
 #include <sound/audio_cal_utils.h>
 #include <sound/audio_effects.h>
 #include <sound/hwdep.h>
+/* HTC_AUD_START */
+#include <sound/htc_acoustic_alsa.h>
+/* HTC_AUD_END */
 #include <sound/q6adm-v2.h>
 #include <sound/apr_audio-v2.h>
 
@@ -59,7 +62,7 @@
 
 static struct mutex routing_lock;
 
-static struct cal_type_data *cal_data;
+static struct cal_type_data *cal_data[MAX_ROUTING_CAL_TYPES];
 
 static int fm_switch_enable;
 static int hfp_switch_enable;
@@ -876,20 +879,21 @@ done:
 }
 EXPORT_SYMBOL(msm_pcm_routing_get_stream_app_type_cfg);
 
-static struct cal_block_data *msm_routing_find_topology_by_path(int path)
+static struct cal_block_data *msm_routing_find_topology_by_path(int path,
+								int cal_index)
 {
 	struct list_head		*ptr, *next;
 	struct cal_block_data		*cal_block = NULL;
 	pr_debug("%s\n", __func__);
 
 	list_for_each_safe(ptr, next,
-		&cal_data->cal_blocks) {
+		&cal_data[cal_index]->cal_blocks) {
 
 		cal_block = list_entry(ptr,
 			struct cal_block_data, list);
 
-		if (((struct audio_cal_info_adm_top *)cal_block->cal_info)
-			->path == path) {
+		if (((struct audio_cal_info_adm_top *)cal_block
+			->cal_info)->path == path) {
 			return cal_block;
 		}
 	}
@@ -899,7 +903,8 @@ static struct cal_block_data *msm_routing_find_topology_by_path(int path)
 
 static struct cal_block_data *msm_routing_find_topology(int path,
 							int app_type,
-							int acdb_id)
+							int acdb_id,
+							int cal_index)
 {
 	struct list_head		*ptr, *next;
 	struct cal_block_data		*cal_block = NULL;
@@ -907,7 +912,7 @@ static struct cal_block_data *msm_routing_find_topology(int path,
 	pr_debug("%s\n", __func__);
 
 	list_for_each_safe(ptr, next,
-		&cal_data->cal_blocks) {
+		&cal_data[cal_index]->cal_blocks) {
 
 		cal_block = list_entry(ptr,
 			struct cal_block_data, list);
@@ -922,7 +927,7 @@ static struct cal_block_data *msm_routing_find_topology(int path,
 	}
 	pr_debug("%s: Can't find topology for path %d, app %d, acdb_id %d defaulting to search by path\n",
 		__func__, path, app_type, acdb_id);
-	return msm_routing_find_topology_by_path(path);
+	return msm_routing_find_topology_by_path(cal_index, path);
 }
 
 static int msm_routing_get_adm_topology(int fedai_id, int session_type,
@@ -938,21 +943,31 @@ static int msm_routing_get_adm_topology(int fedai_id, int session_type,
 	if (cal_data == NULL)
 		goto done;
 
-	mutex_lock(&cal_data->lock);
-
 	app_type = fe_dai_app_type_cfg[fedai_id][session_type][be_id].app_type;
 	acdb_dev_id =
 		fe_dai_app_type_cfg[fedai_id][session_type][be_id].acdb_dev_id;
 
+	mutex_lock(&cal_data[ADM_TOPOLOGY_CAL_TYPE_IDX]->lock);
 	cal_block = msm_routing_find_topology(session_type, app_type,
-					      acdb_dev_id);
-	if (cal_block == NULL)
-		goto unlock;
+					      acdb_dev_id,
+					      ADM_TOPOLOGY_CAL_TYPE_IDX);
+	if (cal_block != NULL)
+		topology = ((struct audio_cal_info_adm_top *)
+			cal_block->cal_info)->topology;
+	mutex_unlock(&cal_data[ADM_TOPOLOGY_CAL_TYPE_IDX]->lock);
 
-	topology = ((struct audio_cal_info_adm_top *)
-		cal_block->cal_info)->topology;
-unlock:
-	mutex_unlock(&cal_data->lock);
+	if (cal_block == NULL) {
+		pr_debug("%s: Check for LSM topology\n", __func__);
+		mutex_lock(&cal_data[ADM_LSM_TOPOLOGY_CAL_TYPE_IDX]->lock);
+		cal_block = msm_routing_find_topology(session_type, app_type,
+						acdb_dev_id,
+						ADM_LSM_TOPOLOGY_CAL_TYPE_IDX);
+		if (cal_block != NULL)
+			topology = ((struct audio_cal_info_adm_top *)
+				cal_block->cal_info)->topology;
+		mutex_unlock(&cal_data[ADM_LSM_TOPOLOGY_CAL_TYPE_IDX]->lock);
+	}
+
 done:
 	pr_debug("%s: Using topology %d\n", __func__, topology);
 	return topology;
@@ -3607,6 +3622,12 @@ static int msm_routing_ec_ref_rx_put(struct snd_kcontrol *kcontrol,
 		msm_route_ec_ref_rx = 22;
 		ec_ref_port_id = AFE_PORT_ID_INT3_MI2S_TX;
 		break;
+/* HTC_AUD_START */
+	case 23:
+		msm_route_ec_ref_rx = 23;
+		ec_ref_port_id = SLIMBUS_7_RX;
+		break;
+/* HTC_AUD_END */
 	default:
 		msm_route_ec_ref_rx = 0; /* NONE */
 		pr_err("%s EC ref rx %ld not valid\n",
@@ -3629,7 +3650,10 @@ static const char *const ec_ref_rx[] = { "None", "SLIM_RX", "I2S_RX",
 	"SLIM_5_RX", "SLIM_1_TX", "QUAT_TDM_TX_1",
 	"QUAT_TDM_RX_0", "QUAT_TDM_RX_1", "QUAT_TDM_RX_2", "SLIM_6_RX",
 	"TERT_MI2S_RX", "QUAT_MI2S_RX", "TERT_TDM_TX_0", "USB_AUDIO_RX",
-	"INT0_MI2S_RX", "INT4_MI2S_RX", "INT3_MI2S_TX"};
+	"INT0_MI2S_RX", "INT4_MI2S_RX", "INT3_MI2S_TX",
+/* HTC_AUD_START */
+	"SLIM_7_RX"};
+/* HTC_AUD_END */
 
 static const struct soc_enum msm_route_ec_ref_rx_enum[] = {
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(ec_ref_rx), ec_ref_rx),
@@ -11119,7 +11143,7 @@ static int msm_routing_put_app_type_cfg_control(struct snd_kcontrol *kcontrol,
 
 static const struct snd_kcontrol_new app_type_cfg_controls[] = {
 	SOC_SINGLE_MULTI_EXT("App Type Config", SND_SOC_NOPM, 0,
-	0xFFFFFFFF, 0, 128, msm_routing_get_app_type_cfg_control,
+	0x7FFFFFFF, 0, 128, msm_routing_get_app_type_cfg_control,
 	msm_routing_put_app_type_cfg_control),
 };
 
@@ -14871,6 +14895,7 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{"TERT_MI2S_RX_DL_HL", "Switch", "TERT_MI2S_DL_HL"},
 	{"TERT_MI2S_RX", NULL, "TERT_MI2S_RX_DL_HL"},
 
+	{"QUAT_MI2S_RX_DL_HL", "Switch", "SLIM0_DL_HL"}, //HTC_AUD
 	{"QUAT_MI2S_RX_DL_HL", "Switch", "QUAT_MI2S_DL_HL"},
 	{"QUAT_MI2S_RX", NULL, "QUAT_MI2S_RX_DL_HL"},
 	{"MI2S_UL_HL", NULL, "TERT_MI2S_TX"},
@@ -15659,10 +15684,6 @@ static int msm_pcm_routing_close(struct snd_pcm_substream *substream)
 	bedai->active = 0;
 	bedai->sample_rate = 0;
 	bedai->channel = 0;
-	for (i = 0; i < MSM_FRONTEND_DAI_MAX; i++) {
-		if (bedai->passthr_mode[i] != LISTEN)
-			bedai->passthr_mode[i] = LEGACY_PCM;
-	}
 	mutex_unlock(&routing_lock);
 
 	return 0;
@@ -16204,7 +16225,8 @@ int msm_routing_set_downmix_control_data(int be_id, int session_id,
 	uint16_t ii;
 	uint16_t *dst_gain_ptr = NULL;
 
-	if (be_id >= MSM_BACKEND_DAI_MAX) {
+	if (be_id < MSM_BACKEND_DAI_PRI_I2S_RX ||
+	    be_id >= MSM_BACKEND_DAI_MAX) {
 		rc = -EINVAL;
 		return rc;
 	}
@@ -16408,13 +16430,39 @@ int msm_routing_check_backend_enabled(int fedai_id)
 	return 0;
 }
 
+static int get_cal_type_index(int32_t cal_type)
+{
+	int ret = -EINVAL;
+
+	switch (cal_type) {
+	case ADM_TOPOLOGY_CAL_TYPE:
+		ret = ADM_TOPOLOGY_CAL_TYPE_IDX;
+		break;
+	case ADM_LSM_TOPOLOGY_CAL_TYPE:
+		ret = ADM_LSM_TOPOLOGY_CAL_TYPE_IDX;
+		break;
+	default:
+		pr_err("%s: Invalid cal type %d\n", __func__, cal_type);
+	}
+	return ret;
+}
+
 static int msm_routing_set_cal(int32_t cal_type,
 					size_t data_size, void *data)
 {
 	int				ret = 0;
+	int				cal_index;
 	pr_debug("%s\n", __func__);
 
-	ret = cal_utils_set_cal(data_size, data, cal_data, 0, NULL);
+	cal_index = get_cal_type_index(cal_type);
+	if (cal_index < 0) {
+		pr_err("%s: Could not get cal index %d\n",
+			__func__, cal_index);
+		ret = -EINVAL;
+		goto done;
+	}
+
+	ret = cal_utils_set_cal(data_size, data, cal_data[cal_index], 0, NULL);
 	if (ret < 0) {
 		pr_err("%s: cal_utils_set_cal failed, ret = %d, cal type = %d!\n",
 			__func__, ret, cal_type);
@@ -16429,7 +16477,7 @@ static void msm_routing_delete_cal_data(void)
 {
 	pr_debug("%s\n", __func__);
 
-	cal_utils_destroy_cal_types(1, &cal_data);
+	cal_utils_destroy_cal_types(MAX_ROUTING_CAL_TYPES, &cal_data[0]);
 
 	return;
 }
@@ -16437,16 +16485,21 @@ static void msm_routing_delete_cal_data(void)
 static int msm_routing_init_cal_data(void)
 {
 	int				ret = 0;
-	struct cal_type_info		cal_type_info = {
-		{ADM_TOPOLOGY_CAL_TYPE,
+	struct cal_type_info		cal_type_info[] = {
+		{{ADM_TOPOLOGY_CAL_TYPE,
 		{NULL, NULL, NULL,
 		msm_routing_set_cal, NULL, NULL} },
-		{NULL, NULL, cal_utils_match_buf_num}
+		{NULL, NULL, cal_utils_match_buf_num} },
+
+		{{ADM_LSM_TOPOLOGY_CAL_TYPE,
+		{NULL, NULL, NULL,
+		msm_routing_set_cal, NULL, NULL} },
+		{NULL, NULL, cal_utils_match_buf_num} },
 	};
 	pr_debug("%s\n", __func__);
 
-	ret = cal_utils_create_cal_types(1, &cal_data,
-		&cal_type_info);
+	ret = cal_utils_create_cal_types(MAX_ROUTING_CAL_TYPES, &cal_data[0],
+		&cal_type_info[0]);
 	if (ret < 0) {
 		pr_err("%s: could not create cal type!\n",
 			__func__);

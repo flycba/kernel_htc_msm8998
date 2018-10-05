@@ -241,7 +241,6 @@ static struct page **get_pages(struct drm_gem_object *obj)
 		msm_obj->sgt = drm_prime_pages_to_sg(p, npages);
 		if (IS_ERR(msm_obj->sgt)) {
 			void *ptr = ERR_CAST(msm_obj->sgt);
-
 			msm_obj->sgt = NULL;
 			return ptr;
 		}
@@ -585,7 +584,7 @@ int msm_gem_get_iova(struct drm_gem_object *obj,
 		obj_remove_domain(domain);
 
 	mutex_unlock(&msm_obj->lock);
-	return 0;
+	return ret;
 }
 
 /* get iova without taking a reference, used in places where you have

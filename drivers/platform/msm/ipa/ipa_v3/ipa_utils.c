@@ -2983,10 +2983,17 @@ bool ipa3_is_client_handle_valid(u32 clnt_hdl)
  */
 void ipa3_proxy_clk_unvote(void)
 {
-	if (ipa3_is_ready() && ipa3_ctx->q6_proxy_clk_vote_valid) {
+	if (!ipa3_is_ready())
+		return;
+
+	mutex_lock(&ipa3_ctx->q6_proxy_clk_vote_mutex);
+	if (ipa3_ctx->q6_proxy_clk_vote_valid) {
 		IPA_ACTIVE_CLIENTS_DEC_SPECIAL("PROXY_CLK_VOTE");
-		ipa3_ctx->q6_proxy_clk_vote_valid = false;
+		ipa3_ctx->q6_proxy_clk_vote_cnt--;
+		if (ipa3_ctx->q6_proxy_clk_vote_cnt == 0)
+			ipa3_ctx->q6_proxy_clk_vote_valid = false;
 	}
+	mutex_unlock(&ipa3_ctx->q6_proxy_clk_vote_mutex);
 }
 
 /**
@@ -2996,10 +3003,17 @@ void ipa3_proxy_clk_unvote(void)
  */
 void ipa3_proxy_clk_vote(void)
 {
-	if (ipa3_is_ready() && !ipa3_ctx->q6_proxy_clk_vote_valid) {
+	if (!ipa3_is_ready())
+		return;
+
+	mutex_lock(&ipa3_ctx->q6_proxy_clk_vote_mutex);
+	if (!ipa3_ctx->q6_proxy_clk_vote_valid ||
+		(ipa3_ctx->q6_proxy_clk_vote_cnt > 0)) {
 		IPA_ACTIVE_CLIENTS_INC_SPECIAL("PROXY_CLK_VOTE");
+		ipa3_ctx->q6_proxy_clk_vote_cnt++;
 		ipa3_ctx->q6_proxy_clk_vote_valid = true;
 	}
+	mutex_unlock(&ipa3_ctx->q6_proxy_clk_vote_mutex);
 }
 
 /**
@@ -3627,12 +3641,14 @@ int ipa3_stop_gsi_channel(u32 clnt_hdl)
 		if (res != -GSI_STATUS_AGAIN && res != -GSI_STATUS_TIMED_OUT)
 			goto end_sequence;
 
-		IPADBG("Inject a DMA_TASK with 1B packet to IPA\n");
-		/* Send a 1B packet DMA_TASK to IPA and try again */
-		res = ipa3_inject_dma_task_for_gsi();
-		if (res) {
-			IPAERR("Failed to inject DMA TASk for GSI\n");
-			goto end_sequence;
+		if (IPA_CLIENT_IS_CONS(ep->client)) {
+			IPADBG("Inject a DMA_TASK with 1B packet to IPA\n");
+			/* Send a 1B packet DMA_TASK to IPA and try again */
+			res = ipa3_inject_dma_task_for_gsi();
+			if (res) {
+				IPAERR("Failed to inject DMA TASk for GSI\n");
+				goto end_sequence;
+			}
 		}
 
 		/* sleep for short period to flush IPA */

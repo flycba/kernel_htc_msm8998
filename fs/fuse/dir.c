@@ -13,6 +13,7 @@
 #include <linux/sched.h>
 #include <linux/namei.h>
 #include <linux/slab.h>
+#include <linux/delay.h>
 
 static bool fuse_use_readdirplus(struct inode *dir, struct dir_context *ctx)
 {
@@ -987,12 +988,19 @@ int fuse_reverse_inval_entry(struct super_block *sb, u64 parent_nodeid,
 	struct inode *parent;
 	struct dentry *dir;
 	struct dentry *entry;
+	int i = 0;
 
 	parent = ilookup5(sb, parent_nodeid, fuse_inode_eq, &parent_nodeid);
 	if (!parent)
 		return -ENOENT;
 
-	mutex_lock(&parent->i_mutex);
+	while (!mutex_trylock(&parent->i_mutex)) {
+		usleep_range(10000, 11000);
+		if (i++ > 500) {
+			iput(parent);
+			return -EBUSY;
+		}
+	}
 	if (!S_ISDIR(parent->i_mode))
 		goto unlock;
 
@@ -1343,7 +1351,8 @@ static int parse_dirplusfile(char *buf, size_t nbytes, struct file *file,
 			*/
 			over = !dir_emit(ctx, dirent->name, dirent->namelen,
 				       dirent->ino, dirent->type);
-			ctx->pos = dirent->off;
+			if (!over)
+				ctx->pos = dirent->off;
 		}
 
 		buf += reclen;
@@ -1656,8 +1665,19 @@ int fuse_do_setattr(struct inode *inode, struct iattr *attr,
 		return err;
 
 	if (attr->ia_valid & ATTR_OPEN) {
-		if (fc->atomic_o_trunc)
+		/* This is coming from open(..., ... | O_TRUNC); */
+		WARN_ON(!(attr->ia_valid & ATTR_SIZE));
+		WARN_ON(attr->ia_size != 0);
+		if (fc->atomic_o_trunc) {
+			/*
+			 * No need to send request to userspace, since actual
+			 * truncation has already been done by OPEN.  But still
+			 * need to truncate page cache.
+			 */
+			i_size_write(inode, 0);
+			truncate_pagecache(inode, 0);
 			return 0;
+		}
 		file = NULL;
 	}
 

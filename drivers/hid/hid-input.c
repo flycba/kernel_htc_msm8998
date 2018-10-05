@@ -1128,18 +1128,26 @@ void hidinput_hid_event(struct hid_device *hid, struct hid_field *field, struct 
 
 	/*
 	 * Ignore out-of-range values as per HID specification,
-	 * section 5.10 and 6.2.25.
+	 * section 5.10 and 6.2.25, when NULL state bit is present.
+	 * When it's not, clamp the value to match Microsoft's input
+	 * driver as mentioned in "Required HID usages for digitizers":
+	 * https://msdn.microsoft.com/en-us/library/windows/hardware/dn672278(v=vs.85).asp
 	 *
 	 * The logical_minimum < logical_maximum check is done so that we
 	 * don't unintentionally discard values sent by devices which
 	 * don't specify logical min and max.
 	 */
 	if ((field->flags & HID_MAIN_ITEM_VARIABLE) &&
-	    (field->logical_minimum < field->logical_maximum) &&
-	    (value < field->logical_minimum ||
-	     value > field->logical_maximum)) {
-		dbg_hid("Ignoring out-of-range value %x\n", value);
-		return;
+	    (field->logical_minimum < field->logical_maximum)) {
+		if (field->flags & HID_MAIN_ITEM_NULL_STATE &&
+		    (value < field->logical_minimum ||
+		     value > field->logical_maximum)) {
+			dbg_hid("Ignoring out-of-range value %x\n", value);
+			return;
+		}
+		value = clamp(value,
+			      field->logical_minimum,
+			      field->logical_maximum);
 	}
 
 	/*
@@ -1159,6 +1167,15 @@ void hidinput_hid_event(struct hid_device *hid, struct hid_field *field, struct 
 	    value == field->value[usage->usage_index])
 		return;
 
+/* HTC_AUD_START */
+	if ((usage->code == KEY_VOLUMEDOWN) ||
+		(usage->code == KEY_VOLUMEUP) ||
+		(usage->code == KEY_NEXTSONG) ||
+		(usage->code == KEY_PLAYPAUSE) ||
+		(usage->code == KEY_PREVIOUSSONG) ||
+		(usage->code == KEY_MEDIA))
+		printk(KERN_INFO "[HID] %s: usage->hid:%x, type:%d, code:%d, value:%d\n", __func__, usage->hid, usage->type, usage->code, value);
+/* HTC_AUD_END */
 	/* report the usage code as scancode if the key status has changed */
 	if (usage->type == EV_KEY &&
 	    (!test_bit(usage->code, input->key)) == value)
@@ -1250,7 +1267,8 @@ static void hidinput_led_worker(struct work_struct *work)
 					      led_work);
 	struct hid_field *field;
 	struct hid_report *report;
-	int len, ret;
+	int ret;
+	u32 len;
 	__u8 *buf;
 
 	field = hidinput_get_led_field(hid);

@@ -65,6 +65,7 @@ enum print_reason {
 #define OTG_DELAY_VOTER			"OTG_DELAY_VOTER"
 #define USBIN_I_VOTER			"USBIN_I_VOTER"
 #define WEAK_CHARGER_VOTER		"WEAK_CHARGER_VOTER"
+#define OV_VOTER			"OV_VOTER"
 
 #define VCONN_MAX_ATTEMPTS	3
 #define OTG_MAX_ATTEMPTS	3
@@ -83,6 +84,7 @@ enum {
 	TYPEC_CC2_REMOVAL_WA_BIT	= BIT(2),
 	QC_AUTH_INTERRUPT_WA_BIT	= BIT(3),
 	OTG_WA				= BIT(4),
+	OV_IRQ_WA_BIT			= BIT(5),
 };
 
 enum smb_irq_index {
@@ -139,8 +141,13 @@ struct smb_irq_info {
 static const unsigned int smblib_extcon_cable[] = {
 	EXTCON_USB,
 	EXTCON_USB_HOST,
+	EXTCON_USB_CC,
+	EXTCON_USB_SPEED,
 	EXTCON_NONE,
 };
+
+/* EXTCON_USB and EXTCON_USB_HOST are mutually exclusive */
+static const u32 smblib_extcon_exclusive[] = {0x3, 0};
 
 struct smb_regulator {
 	struct regulator_dev	*rdev;
@@ -328,6 +335,8 @@ struct smb_charger {
 	int			usb_icl_change_irq_enabled;
 	u32			jeita_status;
 	u8			float_cfg;
+	bool			use_extcon;
+	bool			otg_present;
 
 	/* workaround flag */
 	u32			wa_flags;

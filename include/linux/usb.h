@@ -232,7 +232,7 @@ void usb_put_intf(struct usb_interface *intf);
  * should cope with both LPJ calibration errors and devices not following every
  * detail of the USB Specification.
  */
-#define USB_RESUME_TIMEOUT	40 /* ms */
+#define USB_RESUME_TIMEOUT	120 /* ms */
 
 /**
  * struct usb_interface_cache - long-term representation of a device interface
@@ -332,6 +332,7 @@ struct usb_host_bos {
 	struct usb_ss_container_id_descriptor	*ss_id;
 	struct usb_config_summary_descriptor	*config_summary;
 	unsigned int	num_config_summary_desc;
+	struct usb_ptm_cap_descriptor	*ptm_cap;
 };
 
 int __usb_get_extra_descriptor(char *buffer, unsigned size,

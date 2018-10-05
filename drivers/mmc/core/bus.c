@@ -142,6 +142,10 @@ static void mmc_bus_shutdown(struct device *dev)
 		return;
 	}
 
+	if(mmc_card_sd(card)) {
+		return;
+	}
+
 	if (dev->driver && drv->shutdown)
 		drv->shutdown(card);
 
@@ -180,6 +184,7 @@ static int mmc_bus_suspend(struct device *dev)
 	 */
 	if (ret)
 		pm_generic_resume(dev);
+
 	return ret;
 }
 
@@ -339,6 +344,11 @@ int mmc_add_card(struct mmc_card *card)
 	switch (card->type) {
 	case MMC_TYPE_MMC:
 		type = "MMC";
+		if (stats_workqueue && !card->host->perf_enable) {
+			card->host->perf_enable = true;
+			queue_delayed_work(stats_workqueue, &card->host->stats_work,
+				msecs_to_jiffies(MMC_STATS_INTERVAL));
+		}
 		break;
 	case MMC_TYPE_SD:
 		type = "SD";
@@ -347,6 +357,11 @@ int mmc_add_card(struct mmc_card *card)
 				type = "SDXC";
 			else
 				type = "SDHC";
+		}
+		if (stats_workqueue && !card->host->perf_enable) {
+			card->host->perf_enable = true;
+			queue_delayed_work(stats_workqueue, &card->host->stats_work,
+				msecs_to_jiffies(MMC_STATS_INTERVAL));
 		}
 		break;
 	case MMC_TYPE_SDIO:
@@ -401,6 +416,7 @@ int mmc_add_card(struct mmc_card *card)
 		return ret;
 
 	mmc_card_set_present(card);
+	device_enable_async_suspend(&card->dev);
 
 	return 0;
 }

@@ -26,6 +26,11 @@
 #include <linux/msm-bus.h>
 #include <linux/dma-mapping.h>
 #include <linux/highmem.h>
+/* HTC_AUD_START */
+#if defined(CONFIG_HTC_FEATURES_SSR)
+#include <linux/htc_flags.h>
+#endif
+/* HTC_AUD_END */
 
 #include <soc/qcom/subsystem_restart.h>
 #include <soc/qcom/ramdump.h>
@@ -850,7 +855,7 @@ static int subsys_ramdump(int enable, const struct subsys_desc *subsys)
 	if (!enable)
 		return 0;
 
-	return pil_do_ramdump(&d->desc, d->ramdump_dev);
+	return pil_do_ramdump(&d->desc, d->ramdump_dev, NULL);
 }
 
 static void subsys_free_memory(const struct subsys_desc *subsys)
@@ -1076,23 +1081,55 @@ static int pil_tz_driver_probe(struct platform_device *pdev)
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 						"sp2soc_irq_status");
 		d->irq_status = devm_ioremap_resource(&pdev->dev, res);
+		if (IS_ERR(d->irq_status)) {
+			dev_err(&pdev->dev, "Invalid resource for sp2soc_irq_status\n");
+			rc = PTR_ERR(d->irq_status);
+			goto err_ramdump;
+		}
+
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 						"sp2soc_irq_clr");
 		d->irq_clear = devm_ioremap_resource(&pdev->dev, res);
+		if (IS_ERR(d->irq_clear)) {
+			dev_err(&pdev->dev, "Invalid resource for sp2soc_irq_clr\n");
+			rc = PTR_ERR(d->irq_clear);
+			goto err_ramdump;
+		}
+
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 						"sp2soc_irq_mask");
 		d->irq_mask = devm_ioremap_resource(&pdev->dev, res);
+		if (IS_ERR(d->irq_mask)) {
+			dev_err(&pdev->dev, "Invalid resource for sp2soc_irq_mask\n");
+			rc = PTR_ERR(d->irq_mask);
+			goto err_ramdump;
+		}
+
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 						"rmb_err");
 		d->err_status = devm_ioremap_resource(&pdev->dev, res);
+		if (IS_ERR(d->err_status)) {
+			dev_err(&pdev->dev, "Invalid resource for rmb_err\n");
+			rc = PTR_ERR(d->err_status);
+			goto err_ramdump;
+		}
+
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 						"rmb_err_spare2");
 		d->err_status_spare = devm_ioremap_resource(&pdev->dev, res);
+		if (IS_ERR(d->err_status_spare)) {
+			dev_err(&pdev->dev, "Invalid resource for rmb_err_spare2\n");
+			rc = PTR_ERR(d->err_status_spare);
+			goto err_ramdump;
+		}
+
 		rc = of_property_read_u32_array(pdev->dev.of_node,
 		       "qcom,spss-scsr-bits", d->bits_arr, sizeof(d->bits_arr)/
 							sizeof(d->bits_arr[0]));
-		if (rc)
+		if (rc) {
 			dev_err(&pdev->dev, "Failed to read qcom,spss-scsr-bits");
+			goto err_ramdump;
+		}
 		mask_scsr_irqs(d);
 
 	} else {
@@ -1115,11 +1152,61 @@ static int pil_tz_driver_probe(struct platform_device *pdev)
 	}
 	d->desc.subsys_dev = d->subsys;
 
+/* HTC_AUD_START */
+#if defined(CONFIG_HTC_FEATURES_SSR)
+	/*LPASS restart condition and ramdump rule would follow below
+	1.LPASS restart default enable
+	- flag [6] 0,   [8] 0 -> enable restart, no ramdump
+	- flag [6] 20,  [8] 0 -> reboot
+	- flag [6] 20,  [8] 8 -> disable restart, go DL mode
+	- flag [6] 0,   [8] 8 -> enable restart, online ramdump
+	2.LPASS restart default disable
+	- flag [6] 0,   [8] 0 -> reboot
+	- flag [6] 20,  [8] 0 -> enable restart, no ramdump
+	- flag [6] 20,  [8] 8 -> enable restart, online ramdump
+	- flag [6] 0,   [8] 8 -> disable restart, go DL mode
+	3. Always disable LPASS SSR if boot_mode != normal
+	*/
+	if(!strcmp(d->desc.name, "adsp")) {
+#if defined(CONFIG_HTC_FEATURES_SSR_LPASS_ENABLE)
+		if (get_kernel_flag() & (KERNEL_FLAG_ENABLE_SSR_LPASS)) {
+			pr_info("%s: CONFIG_HTC_FEATURES_SSR_LPASS_ENABLE, KERNEL_FLAG_ENABLE_SSR_LPASS, RESET_SOC.\n", __func__);
+			subsys_set_restart_level(d->subsys, RESET_SOC);
+			subsys_set_enable_ramdump(d->subsys, DISABLE_RAMDUMP);
+		} else {
+			pr_info("%s: CONFIG_HTC_FEATURES_SSR_LPASS_ENABLE, RESET_SUBSYS_COUPLED.\n", __func__);
+			subsys_set_restart_level(d->subsys, RESET_SUBSYS_COUPLED);
+#if 1
+			if (get_radio_flag() & BIT(3))
+				subsys_set_enable_ramdump(d->subsys, ENABLE_RAMDUMP);
+			else
+				subsys_set_enable_ramdump(d->subsys, DISABLE_RAMDUMP);
+#endif
+		}
+#else
+		if (get_kernel_flag() & (KERNEL_FLAG_ENABLE_SSR_LPASS)) {
+			pr_info("%s: KERNEL_FLAG_ENABLE_SSR_LPASS, RESET_SUBSYS_COUPLED.\n", __func__);
+			subsys_set_restart_level(d->subsys, RESET_SUBSYS_COUPLED);
+			if (get_radio_flag() & BIT(3))
+				subsys_set_enable_ramdump(d->subsys, ENABLE_RAMDUMP);
+			else
+				subsys_set_enable_ramdump(d->subsys, DISABLE_RAMDUMP);
+		} else {
+			pr_info("%s: RESET_SOC.\n", __func__);
+			subsys_set_restart_level(d->subsys, RESET_SOC);
+			subsys_set_enable_ramdump(d->subsys, DISABLE_RAMDUMP);
+		}
+#endif
+	}
+#endif
+/* HTC_AUD_END */
+
 	return 0;
 err_subsys:
 	destroy_ramdump_device(d->ramdump_dev);
 err_ramdump:
 	pil_desc_release(&d->desc);
+	platform_set_drvdata(pdev, NULL);
 
 	return rc;
 }

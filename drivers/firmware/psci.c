@@ -33,6 +33,10 @@
 #include <asm/smp_plat.h>
 #include <asm/suspend.h>
 
+#ifdef CONFIG_HTC_DEBUG_FOOTPRINT
+#include <htc_mnemosyne/htc_footprint.h>
+#endif
+
 /*
  * While a 64-bit OS can make calls with SMC32 calling conventions, for some
  * calls it is necessary to use SMC64 to pass or return 64-bit values.
@@ -321,17 +325,28 @@ static int psci_suspend_finisher(unsigned long state_id)
 int psci_cpu_suspend_enter(unsigned long state_id)
 {
 	int ret;
+#ifdef CONFIG_HTC_DEBUG_FOOTPRINT
+	int cpu;
+#endif
 	/*
 	 * idle state_id 0 corresponds to wfi, should never be called
 	 * from the cpu_suspend operations
 	 */
 	if (WARN_ON_ONCE(!state_id))
 		return -EINVAL;
+#ifdef CONFIG_HTC_DEBUG_FOOTPRINT
+	cpu = smp_processor_id();
+	set_cpu_foot_print(cpu, 0x1);
+#endif
 
 	if (!psci_power_state_loses_context(state_id))
 		ret = psci_ops.cpu_suspend(state_id, 0);
 	else
 		ret = cpu_suspend(state_id, psci_suspend_finisher);
+
+#ifdef CONFIG_HTC_DEBUG_FOOTPRINT
+	set_cpu_foot_print(cpu, 0xa);
+#endif
 
 	return ret;
 }
@@ -431,6 +446,8 @@ static void __init psci_init_migrate(void)
 static void __init psci_0_2_set_functions(void)
 {
 	pr_info("Using standard PSCI v0.2 function IDs\n");
+	psci_ops.get_version = psci_get_version;
+
 	psci_function_id[PSCI_FN_CPU_SUSPEND] =
 					PSCI_FN_NATIVE(0_2, CPU_SUSPEND);
 	psci_ops.cpu_suspend = psci_cpu_suspend;
@@ -550,7 +567,7 @@ out_put_node:
 	return err;
 }
 
-static const struct of_device_id const psci_of_match[] __initconst = {
+static const struct of_device_id psci_of_match[] __initconst = {
 	{ .compatible = "arm,psci",	.data = psci_0_1_init},
 	{ .compatible = "arm,psci-0.2",	.data = psci_0_2_init},
 	{ .compatible = "arm,psci-1.0",	.data = psci_0_2_init},

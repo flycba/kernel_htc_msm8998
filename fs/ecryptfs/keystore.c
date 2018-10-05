@@ -461,7 +461,8 @@ out:
  * @auth_tok_key: key containing the authentication token
  * @auth_tok: authentication token
  *
- * Returns zero on valid auth tok; -EINVAL otherwise
+ * Returns zero on valid auth tok; -EINVAL if the payload is invalid; or
+ * -EKEYREVOKED if the key was revoked before we acquired its semaphore.
  */
 static int
 ecryptfs_verify_auth_tok_from_key(struct key *auth_tok_key,
@@ -470,6 +471,12 @@ ecryptfs_verify_auth_tok_from_key(struct key *auth_tok_key,
 	int rc = 0;
 
 	(*auth_tok) = ecryptfs_get_key_payload_data(auth_tok_key);
+	if (IS_ERR(*auth_tok)) {
+		rc = PTR_ERR(*auth_tok);
+		*auth_tok = NULL;
+		goto out;
+	}
+
 	if (ecryptfs_verify_version((*auth_tok)->version)) {
 		printk(KERN_ERR "Data structure version mismatch. Userspace "
 		       "tools must match eCryptfs kernel module with major "
@@ -1736,7 +1743,7 @@ decrypt_passphrase_encrypted_session_key(struct ecryptfs_auth_tok *auth_tok,
 	mutex_lock(tfm_mutex);
 	rc = crypto_blkcipher_setkey(
 		desc.tfm, auth_tok->token.password.session_key_encryption_key,
-		auth_tok->token.password.session_key_encryption_key_bytes);
+		crypt_stat->key_size > 32 ? 32 : crypt_stat->key_size);
 	if (unlikely(rc < 0)) {
 		mutex_unlock(tfm_mutex);
 		printk(KERN_ERR "Error setting key for crypto context\n");
@@ -2317,7 +2324,7 @@ write_tag_3_packet(char *dest, size_t *remaining_bytes,
 	}
 	mutex_lock(tfm_mutex);
 	rc = crypto_blkcipher_setkey(desc.tfm, session_key_encryption_key,
-		auth_tok->token.password.session_key_encryption_key_bytes);
+		crypt_stat->key_size > 32 ? 32 : crypt_stat->key_size);
 	if (rc < 0) {
 		mutex_unlock(tfm_mutex);
 		ecryptfs_printk(KERN_ERR, "Error setting key for crypto "

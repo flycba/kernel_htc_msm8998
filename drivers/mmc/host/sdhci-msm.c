@@ -2,7 +2,7 @@
  * drivers/mmc/host/sdhci-msm.c - Qualcomm Technologies, Inc. MSM SDHCI Platform
  * driver source file
  *
- * Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -37,6 +37,8 @@
 #include <linux/iopoll.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/msm-bus.h>
+#include <linux/proc_fs.h>
+#include <linux/seq_file.h>
 #include <linux/pm_runtime.h>
 #include <trace/events/mmc.h>
 
@@ -142,6 +144,7 @@
 #define CORE_START_CDC_TRAFFIC		(1 << 6)
 
 #define CORE_PWRSAVE_DLL	(1 << 3)
+#define CORE_FIFO_ALT_EN	(1 << 10)
 #define CORE_CMDEN_HS400_INPUT_MASK_CNT (1 << 13)
 
 #define CORE_DDR_CAL_EN		(1 << 0)
@@ -352,6 +355,82 @@ enum vdd_io_level {
 	 */
 	VDD_IO_SET_LEVEL,
 };
+
+static int is_mmc_platform(struct sdhci_msm_pltfm_data *pdata)
+{
+	if (pdata && pdata->slot_type == MMC_TYPE_MMC)
+		return 1;
+
+	return 0;
+}
+
+static int is_sd_platform(struct sdhci_msm_pltfm_data *pdata)
+{
+	if (pdata && pdata->slot_type == MMC_TYPE_SD)
+		return 1;
+
+	return 0;
+}
+
+int mmc_is_sd_host(struct mmc_host *mmc)
+{
+	struct sdhci_host *host = mmc_priv(mmc);
+	struct sdhci_pltfm_host *pltfm_host;
+	struct sdhci_msm_host *msm_host;
+
+	pltfm_host = sdhci_priv(host);
+	msm_host = pltfm_host->priv;
+
+	return is_sd_platform(msm_host->pdata);
+}
+
+int mmc_is_mmc_host(struct mmc_host *mmc)
+{
+	struct sdhci_host *host = mmc_priv(mmc);
+	struct sdhci_pltfm_host *pltfm_host;
+	struct sdhci_msm_host *msm_host;
+
+	pltfm_host = sdhci_priv(host);
+	msm_host = pltfm_host->priv;
+
+	return is_mmc_platform(msm_host->pdata);
+}
+
+static int sdhci_read_speed_class(struct seq_file *m, void *v)
+{
+	struct mmc_host *host = (struct mmc_host*) m->private;
+
+	seq_printf(m, "%d",
+		host->card ? host->card->speed_class : -1);
+	return 0;
+}
+
+/*
+ * seq_file wrappers for procfile show routines.
+ */
+static int sdhci_proc_speed_class_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, sdhci_read_speed_class, PDE_DATA(file_inode(file)));
+}
+
+static const struct file_operations sdhci_proc_speed_class_fops = {
+	.open		= sdhci_proc_speed_class_open,
+	.read		= seq_read,
+	.llseek 	= seq_lseek,
+	.release	= seq_release,
+};
+
+static char *mmc_type_str(unsigned int slot_type)
+{
+	switch (slot_type) {
+		case MMC_TYPE_MMC:		return "MMC";
+		case MMC_TYPE_SD:		return "SD";
+		case MMC_TYPE_SDIO:		return "SDIO";
+		case MMC_TYPE_SD_COMBO:		return "SD COMBO";
+		case MMC_TYPE_NA:
+		default:			return "Unknown type";
+	}
+}
 
 /* MSM platform specific tuning */
 static inline int msm_dll_poll_ck_out_en(struct sdhci_host *host,
@@ -1843,6 +1922,9 @@ struct sdhci_msm_pltfm_data *sdhci_msm_populate_pdata(struct device *dev,
 	if (gpio_is_valid(pdata->status_gpio) && !(flags & OF_GPIO_ACTIVE_LOW))
 		pdata->caps2 |= MMC_CAP2_CD_ACTIVE_HIGH;
 
+	if (of_property_read_u32(np, "htc,slot-type", &pdata->slot_type))
+		pdata->slot_type = MMC_TYPE_NA;
+
 	of_property_read_u32(np, "qcom,bus-width", &bus_width);
 	if (bus_width == 8)
 		pdata->mmc_bus_width = MMC_CAP_8_BIT_DATA;
@@ -2368,6 +2450,11 @@ static int sdhci_msm_setup_vreg(struct sdhci_msm_pltfm_data *pdata,
 
 	vreg_table[0] = curr_slot->vdd_data;
 	vreg_table[1] = curr_slot->vdd_io_data;
+
+	if(is_sd_platform(pdata) && enable ^ vreg_table[0]->is_enabled) {
+		pr_info("%s : %s slot power\n", mmc_type_str(pdata->slot_type),
+			enable ? "Enabling" : "Disabling");
+	}
 
 	for (i = 0; i < ARRAY_SIZE(vreg_table); i++) {
 		if (vreg_table[i]) {
@@ -3945,11 +4032,10 @@ void sdhci_msm_pm_qos_cpu_init(struct sdhci_host *host,
 		group->latency = PM_QOS_DEFAULT_VALUE;
 		pm_qos_add_request(&group->req, PM_QOS_CPU_DMA_LATENCY,
 			group->latency);
-		pr_info("%s (): voted for group #%d (mask=0x%lx) latency=%d (0x%p)\n",
+		pr_info("%s (): voted for group #%d (mask=0x%lx) latency=%d\n",
 			__func__, i,
 			group->req.cpus_affine.bits[0],
-			group->latency,
-			&latency[i].latency[SDHCI_PERFORMANCE_MODE]);
+			group->latency);
 	}
 	msm_host->pm_qos_prev_cpu = -1;
 	msm_host->pm_qos_group_enable = true;
@@ -4154,7 +4240,7 @@ static void sdhci_set_default_hw_caps(struct sdhci_msm_host *msm_host,
 	 * starts coming.
 	 */
 	if ((major == 1) && ((minor == 0x42) || (minor == 0x46) ||
-				(minor == 0x49)))
+				(minor == 0x49) || (minor >= 0x6b)))
 		msm_host->use_14lpp_dll = true;
 
 	/* Fake 3.0V support for SDIO devices which requires such voltage */
@@ -4468,8 +4554,6 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 			goto vreg_deinit;
 		}
 		writel_relaxed(readl_relaxed(tlmm_mem) | 0x2, tlmm_mem);
-		dev_dbg(&pdev->dev, "tlmm reg %pa value 0x%08x\n",
-				&tlmm_memres->start, readl_relaxed(tlmm_mem));
 	}
 
 	/*
@@ -4477,6 +4561,14 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	 */
 	writel_relaxed(CORE_VENDOR_SPEC_POR_VAL,
 	host->ioaddr + msm_host_offset->CORE_VENDOR_SPEC);
+
+	/*
+	 * Ensure SDHCI FIFO is enabled by disabling alternative FIFO
+	 */
+	writel_relaxed((readl_relaxed(host->ioaddr +
+			msm_host_offset->CORE_VENDOR_SPEC3) &
+			~CORE_FIFO_ALT_EN), host->ioaddr +
+			msm_host_offset->CORE_VENDOR_SPEC3);
 
 	if (!msm_host->mci_removed) {
 		/* Set HC_MODE_EN bit in HC_MODE register */
@@ -4732,6 +4824,17 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 		       mmc_hostname(host->mmc), __func__, ret);
 		device_remove_file(&pdev->dev, &msm_host->auto_cmd21_attr);
 	}
+	if (sdhci_msm_is_bootdevice(&pdev->dev))
+		mmc_flush_detect_work(host->mmc);
+
+	if (is_sd_platform(msm_host->pdata)) {
+		msm_host->speed_class = proc_create_data("sd_speed_class", 0444, NULL,
+						&sdhci_proc_speed_class_fops, host->mmc);
+		if (!msm_host->speed_class)
+			pr_err("%s: Failed to create sd_speed_class entry\n",
+				mmc_hostname(host->mmc));
+	}
+
 	/* Successful initialization */
 	goto out;
 
@@ -4797,6 +4900,9 @@ static int sdhci_msm_remove(struct platform_device *pdev)
 		sdhci_msm_bus_cancel_work_and_set_vote(host, 0);
 		sdhci_msm_bus_unregister(msm_host);
 	}
+	if(msm_host->speed_class)
+		remove_proc_entry("sd_speed_class", NULL);
+
 	return 0;
 }
 
@@ -5009,7 +5115,7 @@ static int sdhci_msm_suspend_noirq(struct device *dev)
 }
 
 static const struct dev_pm_ops sdhci_msm_pmops = {
-	SET_SYSTEM_SLEEP_PM_OPS(sdhci_msm_suspend, sdhci_msm_resume)
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(sdhci_msm_suspend, sdhci_msm_resume)
 	SET_RUNTIME_PM_OPS(sdhci_msm_runtime_suspend, sdhci_msm_runtime_resume,
 			   NULL)
 	.suspend_noirq = sdhci_msm_suspend_noirq,

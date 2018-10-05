@@ -54,6 +54,7 @@
 #include <asm/ptrace.h>
 #include <asm/virt.h>
 #include <asm/edac.h>
+#include <soc/qcom/minidump.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/ipi.h>
@@ -134,7 +135,7 @@ static void smp_store_cpu_info(unsigned int cpuid)
  * This is the secondary CPU boot entry.  We're using this CPUs
  * idle thread stack, but a set of temporary page tables.
  */
-asmlinkage void secondary_start_kernel(void)
+asmlinkage notrace void secondary_start_kernel(void)
 {
 	struct mm_struct *mm = &init_mm;
 	unsigned int cpu = smp_processor_id();
@@ -186,7 +187,7 @@ asmlinkage void secondary_start_kernel(void)
 	 * the CPU migration code to notice that the CPU is online
 	 * before we continue.
 	 */
-	pr_info("CPU%u: Booted secondary processor [%08x]\n",
+	pr_debug("CPU%u: Booted secondary processor [%08x]\n",
 					 cpu, read_cpuid_id());
 	set_cpu_online(cpu, true);
 	complete(&cpu_running);
@@ -740,6 +741,7 @@ static void ipi_cpu_stop(unsigned int cpu, struct pt_regs *regs)
 		pr_crit("CPU%u: stopping\n", cpu);
 		show_regs(regs);
 		dump_stack();
+		dump_stack_minidump(regs->sp);
 		arm64_check_cache_ecc(NULL);
 		raw_spin_unlock(&stop_lock);
 	}
@@ -759,7 +761,11 @@ static DEFINE_RAW_SPINLOCK(backtrace_lock);
 /* "in progress" flag of arch_trigger_all_cpu_backtrace */
 static unsigned long backtrace_flag;
 
+#if defined(CONFIG_HTC_DEBUG_WATCHDOG)
+static void smp_send_all_cpu_backtrace(unsigned int backtrace_timeout)
+#else
 static void smp_send_all_cpu_backtrace(void)
+#endif
 {
 	unsigned int this_cpu = smp_processor_id();
 	int i;
@@ -782,11 +788,21 @@ static void smp_send_all_cpu_backtrace(void)
 		smp_cross_call_common(&backtrace_mask, IPI_CPU_BACKTRACE);
 
 	/* Wait for up to 10 seconds for all other CPUs to do the backtrace */
-	for (i = 0; i < 10 * 1000; i++) {
+#if defined(CONFIG_HTC_DEBUG_WATCHDOG)
+	for (i = 0; i < backtrace_timeout * 1000; i++)
+#else
+	for (i = 0; i < 10 * 1000; i++)
+#endif
+	{
 		if (cpumask_empty(&backtrace_mask))
 			break;
 		mdelay(1);
 	}
+
+#if defined(CONFIG_HTC_DEBUG_WATCHDOG)
+	if(i == backtrace_timeout)
+		pr_info( " dump cpu backtrace timeout \n");
+#endif
 
 	clear_bit(0, &backtrace_flag);
 	smp_mb__after_atomic();
@@ -809,7 +825,11 @@ static void ipi_cpu_backtrace(unsigned int cpu, struct pt_regs *regs)
 #ifdef CONFIG_SMP
 void arch_trigger_all_cpu_backtrace(void)
 {
+#if defined(CONFIG_HTC_DEBUG_WATCHDOG)
+	smp_send_all_cpu_backtrace(10);
+#else
 	smp_send_all_cpu_backtrace();
+#endif
 }
 #else
 void arch_trigger_all_cpu_backtrace(void)
@@ -818,6 +838,13 @@ void arch_trigger_all_cpu_backtrace(void)
 }
 #endif
 
+#if defined(CONFIG_HTC_DEBUG_WATCHDOG)
+void arch_trigger_different_cpu_backtrace_dump_timeout(unsigned int time_out)
+{
+	pr_info(" dump cpu backtrace with timeout %u sec \n", time_out);
+	smp_send_all_cpu_backtrace(time_out);
+}
+#endif
 
 /*
  * Main handler for inter-processor interrupts

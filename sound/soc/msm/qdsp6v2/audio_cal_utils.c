@@ -54,6 +54,7 @@ size_t get_cal_info_size(int32_t cal_type)
 		size = sizeof(struct audio_cal_info_voc_col);
 		break;
 	case ADM_TOPOLOGY_CAL_TYPE:
+	case ADM_LSM_TOPOLOGY_CAL_TYPE:
 		size = sizeof(struct audio_cal_info_adm_top);
 		break;
 	case ADM_CUST_TOPOLOGY_CAL_TYPE:
@@ -61,6 +62,7 @@ size_t get_cal_info_size(int32_t cal_type)
 		size = 0;
 		break;
 	case ADM_AUDPROC_CAL_TYPE:
+	case ADM_LSM_AUDPROC_CAL_TYPE:
 		size = sizeof(struct audio_cal_info_audproc);
 		break;
 	case ADM_AUDVOL_CAL_TYPE:
@@ -77,6 +79,7 @@ size_t get_cal_info_size(int32_t cal_type)
 		size = sizeof(struct audio_cal_info_audstrm);
 		break;
 	case AFE_TOPOLOGY_CAL_TYPE:
+	case AFE_LSM_TOPOLOGY_CAL_TYPE:
 		size = sizeof(struct audio_cal_info_afe_top);
 		break;
 	case AFE_CUST_TOPOLOGY_CAL_TYPE:
@@ -86,6 +89,7 @@ size_t get_cal_info_size(int32_t cal_type)
 		size = sizeof(struct audio_cal_info_afe);
 		break;
 	case AFE_COMMON_TX_CAL_TYPE:
+	case AFE_LSM_TX_CAL_TYPE:
 		size = sizeof(struct audio_cal_info_afe);
 		break;
 	case AFE_FB_SPKR_PROT_CAL_TYPE:
@@ -200,6 +204,7 @@ size_t get_user_cal_type_size(int32_t cal_type)
 		size = sizeof(struct audio_cal_type_voc_col);
 		break;
 	case ADM_TOPOLOGY_CAL_TYPE:
+	case ADM_LSM_TOPOLOGY_CAL_TYPE:
 		size = sizeof(struct audio_cal_type_adm_top);
 		break;
 	case ADM_CUST_TOPOLOGY_CAL_TYPE:
@@ -207,6 +212,7 @@ size_t get_user_cal_type_size(int32_t cal_type)
 		size = sizeof(struct audio_cal_type_basic);
 		break;
 	case ADM_AUDPROC_CAL_TYPE:
+	case ADM_LSM_AUDPROC_CAL_TYPE:
 		size = sizeof(struct audio_cal_type_audproc);
 		break;
 	case ADM_AUDVOL_CAL_TYPE:
@@ -223,6 +229,7 @@ size_t get_user_cal_type_size(int32_t cal_type)
 		size = sizeof(struct audio_cal_type_audstrm);
 		break;
 	case AFE_TOPOLOGY_CAL_TYPE:
+	case AFE_LSM_TOPOLOGY_CAL_TYPE:
 		size = sizeof(struct audio_cal_type_afe_top);
 		break;
 	case AFE_CUST_TOPOLOGY_CAL_TYPE:
@@ -232,6 +239,7 @@ size_t get_user_cal_type_size(int32_t cal_type)
 		size = sizeof(struct audio_cal_type_afe);
 		break;
 	case AFE_COMMON_TX_CAL_TYPE:
+	case AFE_LSM_TX_CAL_TYPE:
 		size = sizeof(struct audio_cal_type_afe);
 		break;
 	case AFE_FB_SPKR_PROT_CAL_TYPE:
@@ -912,7 +920,13 @@ int cal_utils_set_cal(size_t data_size, void *data,
 	}
 
 	if ((data_size > get_user_cal_type_size(
+/* HTC_AUD_START Fix Klockwork */
+#if 0
 		cal_type->info.reg.cal_type)) || (data_size < 0)) {
+#else
+		cal_type->info.reg.cal_type))) {
+#endif
+/* HTC_AUD_END */
 		pr_err("%s: cal_type %d, data_size of %zd is invalid, expecting %zd!\n",
 			__func__, cal_type->info.reg.cal_type, data_size,
 			get_user_cal_type_size(cal_type->info.reg.cal_type));

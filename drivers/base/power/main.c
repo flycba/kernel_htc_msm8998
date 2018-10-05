@@ -31,7 +31,6 @@
 #include <linux/suspend.h>
 #include <trace/events/power.h>
 #include <linux/cpufreq.h>
-#include <linux/cpuidle.h>
 #include <linux/timer.h>
 #include <linux/wakeup_reason.h>
 
@@ -162,12 +161,6 @@ void device_pm_move_before(struct device *deva, struct device *devb)
 	pr_debug("PM: Moving %s:%s before %s:%s\n",
 		 deva->bus ? deva->bus->name : "No Bus", dev_name(deva),
 		 devb->bus ? devb->bus->name : "No Bus", dev_name(devb));
-	if (!((devb->pm_domain) || (devb->type && devb->type->pm)
-		|| (devb->class && (devb->class->pm || devb->class->resume))
-		|| (devb->bus && (devb->bus->pm || devb->bus->resume)) ||
-		(devb->driver && devb->driver->pm))) {
-		device_pm_add(devb);
-	}
 	/* Delete deva from dpm_list and reinsert before devb. */
 	list_move_tail(&deva->power.entry, &devb->power.entry);
 }
@@ -182,12 +175,6 @@ void device_pm_move_after(struct device *deva, struct device *devb)
 	pr_debug("PM: Moving %s:%s after %s:%s\n",
 		 deva->bus ? deva->bus->name : "No Bus", dev_name(deva),
 		 devb->bus ? devb->bus->name : "No Bus", dev_name(devb));
-	if (!((devb->pm_domain) || (devb->type && devb->type->pm)
-		|| (devb->class && (devb->class->pm || devb->class->resume))
-		|| (devb->bus && (devb->bus->pm || devb->bus->resume)) ||
-		(devb->driver && devb->driver->pm))) {
-		device_pm_add(devb);
-	}
 	/* Delete deva from dpm_list and reinsert after devb. */
 	list_move(&deva->power.entry, &devb->power.entry);
 }
@@ -604,7 +591,6 @@ void dpm_resume_noirq(pm_message_t state)
 	dpm_show_time(starttime, state, "noirq");
 	resume_device_irqs();
 	device_wakeup_disarm_wake_irqs();
-	cpuidle_resume();
 	trace_suspend_resume(TPS("dpm_resume_noirq"), state.event, false);
 }
 
@@ -1120,7 +1106,6 @@ int dpm_suspend_noirq(pm_message_t state)
 	int error = 0;
 
 	trace_suspend_resume(TPS("dpm_suspend_noirq"), state.event, true);
-	cpuidle_pause();
 	device_wakeup_arm_wake_irqs();
 	suspend_device_irqs();
 	mutex_lock(&dpm_list_mtx);

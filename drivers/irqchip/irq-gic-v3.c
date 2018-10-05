@@ -38,6 +38,10 @@
 
 #include "irq-gic-common.h"
 
+#ifdef CONFIG_HTC_DEBUG_WATCHDOG
+#include <linux/htc_debug_tools.h>
+#endif
+
 struct redist_region {
 	void __iomem		*redist_base;
 	phys_addr_t		phys_base;
@@ -63,6 +67,7 @@ struct gic_chip_data {
 
 static struct gic_chip_data gic_data __read_mostly;
 static struct static_key supports_deactivate = STATIC_KEY_INIT_TRUE;
+static DEFINE_RAW_SPINLOCK(irq_controller_lock);
 
 #define gic_data_rdist()		(this_cpu_ptr(gic_data.rdists.rdist))
 #define gic_data_rdist_rd_base()	(gic_data_rdist()->rd_base)
@@ -414,21 +419,24 @@ static int gic_suspend(void)
 	return 0;
 }
 
+extern void gpio_show_resume_irq(void);
 static void gic_show_resume_irq(struct gic_chip_data *gic)
 {
 	unsigned int i;
 	u32 enabled;
 	u32 pending[32];
 	void __iomem *base = gic_data_dist_base(gic);
-
+	msm_show_resume_irq_mask = 1;
 	if (!msm_show_resume_irq_mask)
 		return;
 
+	raw_spin_lock(&irq_controller_lock);
 	for (i = 0; i * 32 < gic->irq_nr; i++) {
 		enabled = readl_relaxed(base + GICD_ICENABLER + i * 4);
 		pending[i] = readl_relaxed(base + GICD_ISPENDR + i * 4);
 		pending[i] &= enabled;
 	}
+	raw_spin_unlock(&irq_controller_lock);
 
 	for (i = find_first_bit((unsigned long *)pending, gic->irq_nr);
 	     i < gic->irq_nr;
@@ -441,8 +449,13 @@ static void gic_show_resume_irq(struct gic_chip_data *gic)
 			name = "stray irq";
 		else if (desc->action && desc->action->name)
 			name = desc->action->name;
-
+#ifdef CONFIG_HTC_POWER_DEBUG
+		pr_info("[WAKEUP] Resume caused by gic-%d, %d triggered %s\n", i, irq, name);
+		if(i == 240)
+			gpio_show_resume_irq();
+#else
 		pr_warn("%s: %d triggered %s\n", __func__, irq, name);
+#endif
 	}
 }
 
@@ -502,6 +515,14 @@ static asmlinkage void __exception_irq_entry gic_handle_irq(struct pt_regs *regs
 
 		if (likely(irqnr > 15 && irqnr < 1020) || irqnr >= 8192) {
 			int err;
+
+#if defined(CONFIG_HTC_DEBUG_WATCHDOG)
+                       /* only check on timer interrupt */
+                       if (irqnr == 19 && smp_processor_id() == 0) {
+                               unsigned long long timestamp = sched_clock();
+                               htc_debug_watchdog_check_pet(timestamp);
+                       }
+#endif /* CONFIG_HTC_DEBUG_WATCHDOG */
 			uncached_logk(LOGK_IRQ, (void *)(uintptr_t)irqnr);
 			if (static_key_true(&supports_deactivate))
 				gic_write_eoir(irqnr);
@@ -750,7 +771,7 @@ static void gic_send_sgi(u64 cluster_id, u16 tlist, unsigned int irq)
 	       MPIDR_TO_SGI_AFFINITY(cluster_id, 1)	|
 	       tlist << ICC_SGI1R_TARGET_LIST_SHIFT);
 
-	pr_debug("CPU%d: ICC_SGI1R_EL1 %llx\n", smp_processor_id(), val);
+	pr_devel("CPU%d: ICC_SGI1R_EL1 %llx\n", smp_processor_id(), val);
 	gic_write_sgi1r(val);
 }
 
@@ -765,7 +786,7 @@ static void gic_raise_softirq(const struct cpumask *mask, unsigned int irq)
 	 * Ensure that stores to Normal memory are visible to the
 	 * other CPUs before issuing the IPI.
 	 */
-	smp_wmb();
+	wmb();
 
 	for_each_cpu(cpu, mask) {
 		unsigned long cluster_id = cpu_logical_map(cpu) & ~0xffUL;

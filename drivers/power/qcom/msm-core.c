@@ -303,6 +303,7 @@ static void update_related_freq_table(struct cpufreq_policy *policy)
 	}
 }
 
+extern int pnpmgr_cpu_temp_notify(int cpu, int temp);
 static __ref int do_sampling(void *data)
 {
 	int cpu;
@@ -324,6 +325,9 @@ static __ref int do_sampling(void *data)
 			if (prev_temp[cpu] != cpu_node->temp) {
 				prev_temp[cpu] = cpu_node->temp;
 				set_threshold(cpu_node);
+#ifdef ONFIG_HTC_PNPMGR
+				pnpmgr_cpu_temp_notify(cpu, prev_temp[cpu]);
+#endif
 				trace_temp_threshold(cpu, cpu_node->temp,
 					cpu_node->hi_threshold.temp /
 					scaling_factor,
@@ -409,9 +413,10 @@ static int update_userspace_power(struct sched_params __user *argp)
 	if (!sp)
 		return -ENOMEM;
 
-
+	mutex_lock(&policy_update_mutex);
 	sp->power = allocate_2d_array_uint32_t(node->sp->num_of_freqs);
 	if (IS_ERR_OR_NULL(sp->power)) {
+		mutex_unlock(&policy_update_mutex);
 		ret = PTR_ERR(sp->power);
 		kfree(sp);
 		return ret;
@@ -455,6 +460,7 @@ static int update_userspace_power(struct sched_params __user *argp)
 		}
 	}
 	spin_unlock(&update_lock);
+	mutex_unlock(&policy_update_mutex);
 
 	for_each_possible_cpu(cpu) {
 		if (!pdata_valid[cpu])
@@ -468,6 +474,7 @@ static int update_userspace_power(struct sched_params __user *argp)
 	return 0;
 
 failed:
+	mutex_unlock(&policy_update_mutex);
 	for (i = 0; i < TEMP_DATA_POINTS; i++)
 		kfree(sp->power[i]);
 	kfree(sp->power);
