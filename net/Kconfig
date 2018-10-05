@@ -368,21 +368,9 @@ config NET_DROP_MONITOR
 	just checking the various proc files and other utilities for
 	drop statistics, say N here.
 
-config HTC_NETWORK_MODIFY
-	bool "Enable HTC_NETWORK_MODIFY config"
-	default y
-	---help---
-        Enable HTC_NETWORK_MODIFY
-
 endmenu
 
 endmenu
-
-config HTC_NET_DEBUG
-	bool "HTC network debug feature"
-	default y
-	---help---
-	This feature provides mechanism to store net related log to buffer.
 
 source "net/ax25/Kconfig"
 source "net/can/Kconfig"
@@ -421,11 +409,11 @@ config LWTUNNEL
 	  weight tunnel endpoint. Tunnel encapsulation parameters are stored
 	  with light weight tunnel state associated with fib routes.
 
-source "net/ipc_router/Kconfig"
-
 config DST_CACHE
 	bool
 	default n
+
+source "net/ipc_router/Kconfig"
 
 endif   # if NET
 

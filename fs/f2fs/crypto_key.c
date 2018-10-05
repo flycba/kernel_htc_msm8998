@@ -198,7 +198,12 @@ retry:
 		goto out;
 	}
 	crypt_info->ci_keyring_key = keyring_key;
-	BUG_ON(keyring_key->type != &key_type_logon);
+	if (keyring_key->type != &key_type_logon) {
+		printk_once(KERN_WARNING "f2fs: key type must be logon\n");
+		res = -ENOKEY;
+		goto out;
+	}
+	down_read(&keyring_key->sem);
 	ukp = user_key_payload(keyring_key);
 	if (ukp->datalen != sizeof(struct f2fs_encryption_key)) {
 		res = -EINVAL;

@@ -219,10 +219,6 @@ int _ext4_get_encryption_info(struct inode *inode)
 	int for_fname = 0;
 	int mode;
 	int res;
-
-	if (ei->i_crypt_info)
-		return 0;
-
 	res = ext4_init_crypto();
 	if (res)
 		return res;
