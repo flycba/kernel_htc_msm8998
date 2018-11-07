@@ -302,11 +302,18 @@ config GENERAL_BOOST_FREQ_LP
 	default "0"
 	help
 	  General boost frequency for the low-power CPU cluster.
+
  config GENERAL_BOOST_FREQ_PERF
 	int "Performance cluster general boost freq"
 	default "0"
 	help
 	  General boost frequency for the performance CPU cluster.
+
+config MDSS_BOOST_DURATION_MS
+	int "MDSS boost duration"
+	default "100"
+	help
+	  MDSS boost duration in milliseconds.
 
 endif
 
