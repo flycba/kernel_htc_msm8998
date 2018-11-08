@@ -16,6 +16,10 @@
 #include <linux/devfreq_boost.h>
 #include <linux/fb.h>
 #include <linux/input.h>
+#include <linux/moduleparam.h>
+
+static unsigned short devfreq_boost_duration = CONFIG_DEVFREQ_INPUT_BOOST_DURATION_MS;
+module_param(devfreq_boost_duration, short, 0644);
 
 struct df_boost_drv {
 	struct boost_dev devices[DEVFREQ_MAX];
@@ -200,7 +204,7 @@ static void devfreq_input_boost(struct work_struct *work)
 	}
 
 	queue_delayed_work(b->wq, &b->input_unboost,
-		msecs_to_jiffies(CONFIG_DEVFREQ_INPUT_BOOST_DURATION_MS));
+		msecs_to_jiffies(devfreq_boost_duration));
 }
 
 static void devfreq_input_unboost(struct work_struct *work)
