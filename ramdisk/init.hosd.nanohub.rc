@@ -1,0 +1,262 @@
+on late-ftm
+    mkdir /data/vendor 0775 system system
+    mkdir /data/vendor/sensor 0775 system system
+    ## ensure correct calibration file permissions
+    chown root system /persist/sensorcal.json
+    chmod 0660 /persist/sensorcal.json
+
+on late-ftm
+    start nanohub-reset
+
+service nanohub-reset /vendor/bin/nanoapp_cmd reset
+    oneshot
+    disabled
+    user root
+    group system
+
+
+# For CSD calibration
+
+service accel_cal_0 /nanotool -x cal -s accel
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.accel_cal=0
+    start accel_cal_0
+
+service gyro_cal_0 /nanotool -x cal -s gyro
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.gyro_cal=0
+    start gyro_cal_0
+
+service prox_cal_0 /nanotool -x cal -s prox=0
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.prox_cal=0
+    start prox_cal_0
+
+service prox_cal_1 /nanotool -x cal -s prox=1
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.prox_cal=1
+    start prox_cal_1
+
+service prox_cal_2 /nanotool -x cal -s prox=2
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.prox_cal=2
+    start prox_cal_2
+
+service prox_cal_3 /nanotool -x cal -s prox=3
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.prox_cal=3
+    start prox_cal_3
+
+
+service als_cal_0 /nanotool -x cal -s als=36686
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.als_cal=0
+    start als_cal_0
+
+
+service laser_cal_0 /laser_cali -o
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.laser_cal=0
+    start laser_cal_0
+
+service laser_cal_1 /laser_cali -c 700
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.laser_cal=1
+    start laser_cal_1
+
+service laser_cal_2 /laser_cali -m1 15
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.laser_cal=2
+    start laser_cal_2
+
+service laser_cal_3 /laser_cali -m7 15
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.laser_cal=3
+    start laser_cal_3
+
+
+service edge_cal_0 /nanotool -x cal -s edge=0
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.edge_cal=0
+    start edge_cal_0
+
+service edge_cal_1 /nanotool -x cal -s edge=1
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.edge_cal=1
+    start edge_cal_1
+
+service edge_cal_2 /nanotool -x cal -s edge=2
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.edge_cal=2
+    start edge_cal_2
+
+service edge_cal_3 /nanotool -x cal -s edge=3
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.edge_cal=3
+    start edge_cal_3
+
+service edge_cal_4 /nanotool -x cal -s edge=4
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.edge_cal=4
+    start edge_cal_4
+
+service edge_cal_5 /nanotool -x cal -s edge=5
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.edge_cal=5
+    start edge_cal_5
+
+service edge_cal_6 /nanotool -x cal -s edge=6
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.edge_cal=6
+    start edge_cal_6
+
+service edge_cal_7 /nanotool -x cal -s edge=7
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.edge_cal=7
+    start edge_cal_7
+
+service edge_cal_49 /nanotool -x cal -s edge=49
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.edge_cal=49
+    start edge_cal_49
+
+service edge_cal_50 /nanotool -x cal -s edge=50
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.edge_cal=50
+    start edge_cal_50
+
+service edge_cal_51 /nanotool -x cal -s edge=51
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.edge_cal=51
+    start edge_cal_51
+
+service edge_cal_52 /nanotool -x cal -s edge=52
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.edge_cal=52
+    start edge_cal_52
+
+service edge_cal_53 /nanotool -x cal -s edge=53
+    user root
+    group root
+    disabled
+    seclabel u:object_r:nanoapp_cmd_exec:s0
+    oneshot
+
+on property:nanotool.edge_cal=53
+    start edge_cal_53
+
