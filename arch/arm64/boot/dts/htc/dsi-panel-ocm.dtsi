@@ -202,7 +202,7 @@
 		compatible = "htc,mdss_dsi_jdi_s6d1ha2_dualdsi_wqhd_cmd";
 		qcom,mdss-dsi-panel-name = "WQHD JDI S6D1HA2 5.5 command mode panel";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
-		qcom,mdss-dsi-panel-framerate = <60>;
+		qcom,mdss-dsi-panel-framerate = <90>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
 		qcom,mdss-dsi-stream = <0>;
 		qcom,mdss-dsi-panel-width = <720>;
@@ -475,9 +475,9 @@
 		compatible = "htc,mdss_dsi_jdi_td4353_dualdsi_wqhd_cmd";
 		qcom,mdss-dsi-panel-name = "WQHD JDI TD4353 5.99 command mode panel";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
-		qcom,mdss-dsi-panel-framerate = <60>;
-		qcom,mdss-dsi-panel-clockrate = <862000000>;
-		qcom,mdss-mdp-transfer-time-us = <14500>;
+		qcom,mdss-dsi-panel-framerate = <90>;
+		qcom,mdss-dsi-panel-clockrate = <1077500000>;
+		qcom,mdss-mdp-transfer-time-us = <10720>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
 		qcom,mdss-dsi-stream = <0>;
 		qcom,mdss-dsi-panel-width = <720>;
