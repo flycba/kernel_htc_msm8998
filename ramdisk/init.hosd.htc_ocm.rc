@@ -1,0 +1,8 @@
+import init.hosd.common.rc
+import init.hosd.ftm.ocm.rc
+import init.hosd.usb.configfs.rc
+import init.hosd.nanohub.rc
+import init.htc.storage.exfat.rc
+
+on boot
+    setprop sys.usb.controller "a800000.dwc3"
