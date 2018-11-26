@@ -320,7 +320,6 @@ static int cpu_notifier_cb(struct notifier_block *nb,
 	struct boost_drv *b = container_of(nb, typeof(*b), cpu_notif);
 	struct cpufreq_policy *policy = data;
 	u32 boost_freq, min_freq, state;
-	bool do_boost = false;
 
 	if (action != CPUFREQ_ADJUST)
 		return NOTIFY_OK;
@@ -329,7 +328,7 @@ static int cpu_notifier_cb(struct notifier_block *nb,
 
 	/* Boost CPU to max frequency for max boost */
 	if (state & MAX_BOOST) {
-		if (b->cpu = policy->cpu) {
+		if ((b->cpu = policy->cpu)) {
 			policy->min = policy->max;
 			b->cpu = 9;
 			return NOTIFY_OK;
