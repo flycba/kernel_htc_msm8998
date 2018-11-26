@@ -49,6 +49,7 @@
 #include <linux/dma-buf.h>
 #include <linux/cpu_input_boost.h>
 #include <linux/devfreq_boost.h>
+#include <linux/moduleparam.h>
 #include <sync.h>
 #include <sw_sync.h>
 
@@ -85,6 +86,9 @@
  * Default value is set to 1 sec.
  */
 #define MDP_TIME_PERIOD_CALC_FPS_US	1000000
+
+static unsigned short mdss_boost_duration = CONFIG_MDSS_BOOST_DURATION_MS;
+module_param(mdss_boost_duration, short, 0644);
 
 static struct fb_info *fbi_list[MAX_FBI_LIST];
 static int fbi_list_index;
@@ -5204,7 +5208,7 @@ int mdss_fb_do_ioctl(struct fb_info *info, unsigned int cmd,
 		ret = mdss_fb_mode_switch(mfd, dsi_mode);
 		break;
 	case MSMFB_ATOMIC_COMMIT:
-		cpu_general_boost_kick(64);
+		cpu_general_boost_kick(mdss_boost_duration);
 		devfreq_boost_kick(DEVFREQ_MSM_CPUBW);
 		ret = mdss_fb_atomic_commit_ioctl(info, argp, file);
 		break;
