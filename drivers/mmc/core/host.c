@@ -43,6 +43,8 @@
 static DEFINE_IDR(mmc_host_idr);
 static DEFINE_SPINLOCK(mmc_host_lock);
 
+extern struct workqueue_struct *stats_workqueue;
+
 static void mmc_host_classdev_release(struct device *dev)
 {
 	struct mmc_host *host = cls_dev_to_mmc_host(dev);
@@ -52,9 +54,28 @@ static void mmc_host_classdev_release(struct device *dev)
 	kfree(host);
 }
 
+static int mmc_host_prepare(struct device *dev)
+{
+	/*
+	 * Since mmc_host is a virtual device, we don't have to do anything.
+	 * If we return a positive value, the pm framework will consider that
+	 * the runtime suspend and system suspend of this device is same and
+	 * will set direct_complete flag as true. We don't want this as the
+	 * mmc_host always has positive disable_depth and setting the flag
+	 * will not speed up the suspend process.
+	 * So return 0.
+	 */
+	return 0;
+}
+
+static const struct dev_pm_ops mmc_pm_ops = {
+	.prepare = mmc_host_prepare,
+};
+
 static struct class mmc_host_class = {
 	.name		= "mmc_host",
 	.dev_release	= mmc_host_classdev_release,
+	.pm		= &mmc_pm_ops,
 };
 
 int mmc_register_host_class(void)
@@ -611,6 +632,10 @@ struct mmc_host *mmc_alloc_host(int extra, struct device *dev)
 	spin_lock_init(&host->lock);
 	init_waitqueue_head(&host->wq);
 	INIT_DELAYED_WORK(&host->detect, mmc_rescan);
+	INIT_DELAYED_WORK(&host->stats_work, mmc_stats);
+
+	host->perf.cmdq_read_map = 0;
+	host->perf.cmdq_write_map = 0;
 #ifdef CONFIG_PM
 	host->pm_notify.notifier_call = mmc_pm_notify;
 #endif
@@ -816,6 +841,8 @@ set_perf(struct device *dev, struct device_attribute *attr,
 	unsigned long flags;
 
 	sscanf(buf, "%lld", &value);
+	host->debug_mask = value;
+	pr_info("%s: set debug 0x%llx\n", mmc_hostname(host), value);
 	spin_lock_irqsave(&host->lock, flags);
 	if (!value) {
 		memset(&host->perf, 0, sizeof(host->perf));

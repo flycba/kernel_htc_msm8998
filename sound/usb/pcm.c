@@ -39,6 +39,8 @@
 #define SUBSTREAM_FLAG_DATA_EP_STARTED	0
 #define SUBSTREAM_FLAG_SYNC_EP_STARTED	1
 
+extern void htc_pd_controller_restart(void); /* HTC_AUD: add usb reset function */
+
 /* return the estimated delay based on USB frame counters */
 snd_pcm_uframes_t snd_usb_pcm_delay(struct snd_usb_substream *subs,
 				    unsigned int rate)
@@ -348,6 +350,15 @@ static int set_sync_ep_implicit_fb_quirk(struct snd_usb_substream *subs,
 
 		alts = &iface->altsetting[1];
 		goto add_sync_ep;
+	case USB_ID(0x1397, 0x0002):
+		ep = 0x81;
+		iface = usb_ifnum_to_if(dev, 1);
+
+		if (!iface || iface->num_altsetting == 0)
+			return -EINVAL;
+
+		alts = &iface->altsetting[1];
+		goto add_sync_ep;
 	}
 	if (attr == USB_ENDPOINT_SYNC_ASYNC &&
 	    altsd->bInterfaceClass == USB_CLASS_VENDOR_SPEC &&
@@ -522,6 +533,12 @@ static int set_format(struct snd_usb_substream *subs, struct audioformat *fmt)
 			dev_err(&dev->dev,
 				"%d:%d: usb_set_interface failed (%d)\n",
 				fmt->iface, fmt->altsetting, err);
+/* HTC_AUD_START - reset PD to recover if hit timeout */
+			if (err == -ETIMEDOUT) {
+				dev_err(&dev->dev,"usb_set_interface timeout: trigger reset\n");
+				htc_pd_controller_restart();
+			}
+/* HTC_AUD_END */
 			return -EIO;
 		}
 		dev_dbg(&dev->dev, "setting usb interface %d:%d\n",
@@ -593,6 +610,14 @@ int snd_usb_enable_audio_stream(struct snd_usb_substream *subs,
 			return ret;
 
 		iface = usb_ifnum_to_if(subs->dev, subs->cur_audiofmt->iface);
+
+/* HTC_AUD_START Fix Klockwork */
+		if (iface == NULL) {
+			dev_err(&subs->dev->dev, "interface is NULL\n");
+			return -EINVAL;
+		}
+/* HTC_AUD_END */
+
 		alts = &iface->altsetting[subs->cur_audiofmt->altset_idx];
 		ret = snd_usb_init_sample_rate(subs->stream->chip,
 					       subs->cur_audiofmt->iface,
@@ -1349,7 +1374,7 @@ static void retire_capture_urb(struct snd_usb_substream *subs,
 		if (bytes % (runtime->sample_bits >> 3) != 0) {
 			int oldbytes = bytes;
 			bytes = frames * stride;
-			dev_warn(&subs->dev->dev,
+			dev_warn_ratelimited(&subs->dev->dev,
 				 "Corrected urb data len. %d->%d\n",
 							oldbytes, bytes);
 		}

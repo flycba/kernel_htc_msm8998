@@ -40,6 +40,7 @@
 #include <linux/usb/gadget.h>
 #include <linux/log2.h>
 #include <linux/configfs.h>
+#include <linux/switch.h>
 
 /* FUNCTION_SUSPEND: suspend options from usb 3.0 spec Table 9-7 */
 #define FUNC_SUSPEND_OPT_SUSP_MASK BIT(0)
@@ -56,6 +57,9 @@
 
 /* big enough to hold our biggest descriptor */
 #define USB_COMP_EP0_BUFSIZ	4096
+
+/* OS feature descriptor length <= 4kB */
+#define USB_COMP_EP0_OS_DESC_BUFSIZ	4096
 
 #define USB_MS_TO_HS_INTERVAL(x)	(ilog2((x * 1000 / 125)) + 1)
 struct usb_configuration;
@@ -357,6 +361,13 @@ enum {
 	USB_GADGET_FIRST_AVAIL_IDX,
 };
 
+enum {
+	OS_NOT_YET,
+	OS_MAC,
+	OS_LINUX,
+	OS_WINDOWS,
+};
+
 /**
  * struct usb_composite_driver - groups configurations into a gadget
  * @name: For diagnostics, identifies the driver.
@@ -504,6 +515,17 @@ struct usb_composite_dev {
 	struct usb_composite_driver	*driver;
 	u8				next_string_id;
 	char				*def_manufacturer;
+
+	int				os_type;
+	int 				first_dt_w_length;
+	int				first_string_w_length;
+
+#if defined(CONFIG_USB_CONFIGFS_F_AUTOBOT)
+	struct switch_dev		sw_function_switch_on;
+	struct switch_dev		sw_function_switch_off;
+#endif
+
+	struct switch_dev		sw_connect2pc;
 
 	/* the gadget driver won't enable the data pullup
 	 * while the deactivation count is nonzero.

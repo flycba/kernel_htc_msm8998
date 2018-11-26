@@ -91,6 +91,7 @@
 #include <linux/xattr.h>
 #include <linux/seemp_api.h>
 #include <linux/seemp_instrumentation.h>
+#include <linux/nospec.h>
 
 #include <asm/uaccess.h>
 #include <asm/unistd.h>
@@ -590,9 +591,21 @@ static struct socket *sock_alloc(void)
  *	callback, and the inode is then released if the socket is bound to
  *	an inode not a file.
  */
+/* +SSD_RIL: Garbage_Filter */
+#ifdef CONFIG_HTC_GARBAGE_FILTER
+extern int add_or_remove_port(struct sock *sk, int add_or_remove);
+#endif
+/* -SSD_RIL: Garbage_Filter */
 
 void sock_release(struct socket *sock)
 {
+	/* ++SSD_RIL: Garbage_Filter */
+#ifdef CONFIG_HTC_GARBAGE_FILTER
+	if (sock->sk != NULL && (sock->sk->sk_protocol == IPPROTO_TCP || sock->sk->sk_protocol == IPPROTO_UDP))
+		add_or_remove_port(sock->sk, 0);
+#endif
+	/* --SSD_RIL: Garbage_Filter */
+
 	if (sock->ops) {
 		struct module *owner = sock->ops->owner;
 
@@ -1450,6 +1463,13 @@ SYSCALL_DEFINE2(listen, int, fd, int, backlog)
 				sock_put(sock->sk);
 		}
 		fput_light(sock->file, fput_needed);
+
+		/* ++SSD_RIL: Garbage_Filter */
+#ifdef CONFIG_HTC_GARBAGE_FILTER
+		if (sock->sk != NULL && (sock->sk->sk_protocol == IPPROTO_TCP || sock->sk->sk_protocol == IPPROTO_UDP))
+			add_or_remove_port(sock->sk, 1);
+#endif
+		/* --SSD_RIL: Garbage_Filter */
 	}
 	return err;
 }
@@ -1756,6 +1776,7 @@ SYSCALL_DEFINE6(recvfrom, int, fd, void __user *, ubuf, size_t, size,
 	/* We assume all kernel code knows the size of sockaddr_storage */
 	msg.msg_namelen = 0;
 	msg.msg_iocb = NULL;
+	msg.msg_flags = 0;
 	if (sock->file->f_flags & O_NONBLOCK)
 		flags |= MSG_DONTWAIT;
 	err = sock_recvmsg(sock, &msg, iov_iter_count(&msg.msg_iter), flags);
@@ -2383,6 +2404,7 @@ SYSCALL_DEFINE2(socketcall, int, call, unsigned long __user *, args)
 
 	if (call < 1 || call > SYS_SENDMMSG)
 		return -EINVAL;
+	call = array_index_nospec(call, SYS_SENDMMSG + 1);
 
 	len = nargs[call];
 	if (len > sizeof(a))
@@ -2592,6 +2614,15 @@ out_fs:
 }
 
 core_initcall(sock_init);	/* early initcall */
+
+static int __init jit_init(void)
+{
+#ifdef CONFIG_BPF_JIT_ALWAYS_ON
+	bpf_jit_enable = 1;
+#endif
+	return 0;
+}
+pure_initcall(jit_init);
 
 #ifdef CONFIG_PROC_FS
 void socket_seq_show(struct seq_file *seq)

@@ -16,6 +16,7 @@
 #include <linux/blktrace_api.h>
 #include <linux/blk-cgroup.h>
 #include "blk.h"
+#include "../kernel/sched/sched.h"
 
 /*
  * tunables
@@ -34,6 +35,11 @@ static int cfq_slice_idle = HZ / 125;
 static int cfq_group_idle = HZ / 125;
 static const int cfq_target_latency = HZ * 3/10; /* 300 ms */
 static const int cfq_hist_divisor = 4;
+
+
+#ifdef CONFIG_HTC_PNPMGR
+extern int launch_event_enabled;
+#endif
 
 /*
  * offset from end of service tree
@@ -71,6 +77,8 @@ static struct kmem_cache *cfq_pool;
 #define CFQ_WEIGHT_LEGACY_MIN	10
 #define CFQ_WEIGHT_LEGACY_DFL	500
 #define CFQ_WEIGHT_LEGACY_MAX	1000
+
+#define DEFAULT_CPU_SHARE 1024
 
 struct cfq_ttime {
 	unsigned long last_end_request;
@@ -2905,7 +2913,8 @@ static void cfq_arm_slice_timer(struct cfq_data *cfqd)
 	 * for devices that support queuing, otherwise we still have a problem
 	 * with sync vs async workloads.
 	 */
-	if (blk_queue_nonrot(cfqd->queue) && cfqd->hw_tag)
+	if (blk_queue_nonrot(cfqd->queue) && cfqd->hw_tag &&
+		!cfqd->cfq_group_idle)
 		return;
 
 	WARN_ON(!RB_EMPTY_ROOT(&cfqq->sort_list));
@@ -3637,6 +3646,22 @@ static void cfq_init_prio_data(struct cfq_queue *cfqq, struct cfq_io_cq *cic)
 	struct task_struct *tsk = current;
 	int ioprio_class;
 
+#ifdef CONFIG_HTC_PNPMGR
+	if (launch_event_enabled)
+	{
+		int bg;
+		bg = (tsk->sched_task_group->shares < DEFAULT_CPU_SHARE)? 1 : 0;
+		if (bg) {
+			cfqq->ioprio_class = IOPRIO_CLASS_IDLE;
+			cfqq->ioprio = 7;
+			cfqq->org_ioprio = cfqq->ioprio;
+			cfq_clear_cfqq_idle_window(cfqq);
+			cfq_mark_cfqq_prio_changed(cfqq);
+			return;
+		}
+	}
+#endif
+
 	if (!cfq_cfqq_prio_changed(cfqq))
 		return;
 
@@ -3810,7 +3835,8 @@ cfq_get_queue(struct cfq_data *cfqd, bool is_sync, struct cfq_io_cq *cic,
 			goto out;
 	}
 
-	cfqq = kmem_cache_alloc_node(cfq_pool, GFP_NOWAIT | __GFP_ZERO,
+	cfqq = kmem_cache_alloc_node(cfq_pool,
+				     GFP_NOWAIT | __GFP_ZERO | __GFP_NOWARN,
 				     cfqd->queue->node);
 	if (!cfqq) {
 		cfqq = &cfqd->oom_cfqq;
@@ -4767,6 +4793,8 @@ static int __init cfq_init(void)
 		cfq_slice_async = 1;
 	if (!cfq_slice_idle)
 		cfq_slice_idle = 1;
+
+	cfq_slice_idle = 0;
 
 #ifdef CONFIG_CFQ_GROUP_IOSCHED
 	if (!cfq_group_idle)

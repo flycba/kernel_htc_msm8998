@@ -165,6 +165,9 @@ Optional properties:
 - qcom,mdss-dsi-border-color:		Defines the border color value if border is present.
 					0 = default value.
 - qcom,mdss-dsi-pan-enable-dynamic-fps:	Boolean used to enable change in frame rate dynamically.
+- qcom,mdss-dsi-pan-enable-dynamic-bitclk: Boolean used to enable change in DSI clock dynamically.
+- qcom,mdss-dsi-dynamic-bitclk_freq:	An array of integers that specifies the DSI bit clock
+					frequencies supported as part of dynamic bit clock feature.
 - qcom,mdss-dsi-pan-fps-update:		A string that specifies when to change the frame rate.
 					"dfps_suspend_resume_mode"= FPS change request is
 					implemented during suspend/resume.
@@ -576,6 +579,22 @@ Optional properites:
 - qcom,mdss-dsi-post-init-delay:        Specifies required number of frames to wait so that panel can be functional
 					to show proper display.
 
+- htc,burst-on-level           An integer value indicates the burst mode on level.
+- htc,burst-off-level          An integer value indicated the burst mode off level.
+- htc,burst-bl-value           An integer value indicated the burst bl value.
+- htc,mdss-dsi-bl-backlight             Specifies primary backlight device node when "bl_ctrl_backlight" was used.
+- htc,color-temp-cmds:		A node lists the color temperature setting that base on
+					qcom dsi controller protocol.
+- htc,color-default-cmds:      A byte stream formed by multiple dcs packets base on
+                                      qcom dsi controller protocol.
+- htc,color-srgb-cmds:         A byte stream formed by multiple dcs packets base on
+                                      qcom dsi controller protocol.
+- htc,rst-keep-high: A boolean property to indicate, whether device need lcm reset gpio(non cpu-gpio) keep high while suspend.
+- htc,esd-status-check-mode: Specifies HTC panel status check method for ESD recovery.
+					"tp_reg_check" = TP driver monitor IC status to check if need to recover panel.
+- htc,hal_color_feature_enabled: A boolean property to decide if need to use hal color feature
+for htc color calibration.
+htc,ddic_color_mode: A boolean property to decide if need to set color mode via DDIC.
 Additional properties added to the second level nodes that represent timings properties:
 - qcom,mdss-dsi-timing-default:		Property that specifies the current child as the default
 					timing configuration that will be used.
@@ -696,6 +715,9 @@ Example:
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 		qcom,mdss-dsi-pan-enable-dynamic-fps;
 		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
+		qcom,mdss-dsi-pan-enable-dynamic-bitclk;
+		qcom,mdss-dsi-dynamic-bitclk_freq = <711037824 724453632 737869440
+			751285248 764701056 778116864 791532672 804948480>;
 		qcom,min-refresh-rate = <30>;
 		qcom,max-refresh-rate = <60>;
 		qcom,mdss-dsi-bl-pmic-bank-select = <0>;

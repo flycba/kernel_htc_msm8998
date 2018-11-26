@@ -142,6 +142,10 @@ static void mmc_bus_shutdown(struct device *dev)
 		return;
 	}
 
+	if(mmc_card_sd(card)) {
+		return;
+	}
+
 	if (dev->driver && drv->shutdown)
 		drv->shutdown(card);
 
@@ -167,19 +171,9 @@ static int mmc_bus_suspend(struct device *dev)
 	if (mmc_bus_needs_resume(host))
 		return 0;
 	ret = host->bus_ops->suspend(host);
-
-	/*
-	 * bus_ops->suspend may fail due to some reason
-	 * In such cases if we return error to PM framework
-	 * from here without calling pm_generic_resume then mmc
-	 * request may get stuck since PM framework will assume
-	 * that mmc bus is not suspended (because of error) and
-	 * it won't call resume again.
-	 *
-	 * So in case of error call pm_generic_resume().
-	 */
 	if (ret)
 		pm_generic_resume(dev);
+
 	return ret;
 }
 
@@ -339,6 +333,11 @@ int mmc_add_card(struct mmc_card *card)
 	switch (card->type) {
 	case MMC_TYPE_MMC:
 		type = "MMC";
+		if (stats_workqueue && !card->host->perf_enable) {
+			card->host->perf_enable = true;
+			queue_delayed_work(stats_workqueue, &card->host->stats_work,
+				msecs_to_jiffies(MMC_STATS_INTERVAL));
+		}
 		break;
 	case MMC_TYPE_SD:
 		type = "SD";
@@ -347,6 +346,11 @@ int mmc_add_card(struct mmc_card *card)
 				type = "SDXC";
 			else
 				type = "SDHC";
+		}
+		if (stats_workqueue && !card->host->perf_enable) {
+			card->host->perf_enable = true;
+			queue_delayed_work(stats_workqueue, &card->host->stats_work,
+				msecs_to_jiffies(MMC_STATS_INTERVAL));
 		}
 		break;
 	case MMC_TYPE_SDIO:
@@ -401,6 +405,7 @@ int mmc_add_card(struct mmc_card *card)
 		return ret;
 
 	mmc_card_set_present(card);
+	device_enable_async_suspend(&card->dev);
 
 	return 0;
 }

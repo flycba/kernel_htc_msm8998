@@ -62,6 +62,15 @@ struct drm_msm_timespec {
 	__s64 tv_nsec;         /* nanoseconds */
 };
 
+/* From CEA.861.3 */
+#define HDR_EOTF_SMTPE_ST2084	0x2
+#define HDR_EOTF_HLG		0x3
+
+/* hdr hdmi state takes possible values of 0, 1 and 2 respectively */
+#define DRM_MSM_HDR_DISABLE  0
+#define DRM_MSM_HDR_ENABLE   1
+#define DRM_MSM_HDR_RESET    2
+
 /*
  * HDR Metadata
  * These are defined as per EDID spec and shall be used by the sink
@@ -234,7 +243,7 @@ struct drm_msm_gem_submit_cmd {
 	__u32 size;           /* in, cmdstream size */
 	__u32 pad;
 	__u32 nr_relocs;      /* in, number of submit_reloc's */
-	__u64 __user relocs;  /* in, ptr to array of submit_reloc's */
+	__u64 relocs;         /* in, ptr to array of submit_reloc's */
 };
 
 /* Each buffer referenced elsewhere in the cmdstream submit (ie. the
@@ -274,8 +283,8 @@ struct drm_msm_gem_submit {
 	__u32 fence;          /* out */
 	__u32 nr_bos;         /* in, number of submit_bo's */
 	__u32 nr_cmds;        /* in, number of submit_cmd's */
-	__u64 __user bos;     /* in, ptr to array of submit_bo's */
-	__u64 __user cmds;    /* in, ptr to array of submit_cmd's */
+	__u64 bos;     /* in, ptr to array of submit_bo's */
+	__u64 cmds;    /* in, ptr to array of submit_cmd's */
 	__s32 fence_fd;       /* gap for the fence_fd which is upstream */
 	__u32 queueid;         /* in, submitqueue id */
 };

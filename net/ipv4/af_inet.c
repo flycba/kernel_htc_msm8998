@@ -582,6 +582,12 @@ static long inet_wait_for_connect(struct sock *sk, long timeo, int writebias)
  *	Connect to a remote host. There is regrettably still a little
  *	TCP 'magic' in here.
  */
+/* ++SSD_RIL: Garbage_Filter */
+#ifdef CONFIG_HTC_GARBAGE_FILTER
+int add_or_remove_port(struct sock *sk, int add_or_remove);
+#endif
+/* --SSD_RIL: Garbage_Filter */
+
 int __inet_stream_connect(struct socket *sock, struct sockaddr *uaddr,
 			  int addr_len, int flags)
 {
@@ -619,6 +625,12 @@ int __inet_stream_connect(struct socket *sock, struct sockaddr *uaddr,
 			goto out;
 
 		sock->state = SS_CONNECTING;
+		/* ++SSD_RIL: Garbage_Filter */
+#ifdef CONFIG_HTC_GARBAGE_FILTER
+		if (sock->sk != NULL && (sock->sk->sk_protocol == IPPROTO_TCP || sock->sk->sk_protocol == IPPROTO_UDP))
+			add_or_remove_port(sk, 1);
+#endif
+		/* --SSD_RIL: Garbage_Filter */
 
 		/* Just entered SS_CONNECTING state; the only
 		 * difference is that return value in non-blocking
@@ -1301,6 +1313,7 @@ static struct sk_buff *inet_gso_segment(struct sk_buff *skb,
 		if (encap)
 			skb_reset_inner_headers(skb);
 		skb->network_header = (u8 *)iph - skb->head;
+		skb_reset_mac_len(skb);
 	} while ((skb = skb->next));
 
 out:

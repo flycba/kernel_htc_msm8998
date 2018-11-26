@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -62,8 +62,16 @@ int ipa3_enable_data_path(u32 clnt_hdl)
 
 	IPADBG("Enabling data path\n");
 	if (IPA_CLIENT_IS_CONS(ep->client)) {
-		memset(&holb_cfg, 0 , sizeof(holb_cfg));
-		holb_cfg.en = IPA_HOLB_TMR_DIS;
+		memset(&holb_cfg, 0, sizeof(holb_cfg));
+		/*
+		 * Set HOLB on USB DPL CONS to avoid IPA stall
+		 * if DPL client is not pulling the data
+		 * on other end from IPA hw.
+		 */
+		if (ep->client == IPA_CLIENT_USB_DPL_CONS)
+			holb_cfg.en = IPA_HOLB_TMR_EN;
+		else
+			holb_cfg.en = IPA_HOLB_TMR_DIS;
 		holb_cfg.tmr_val = 0;
 		res = ipa3_cfg_ep_holb(clnt_hdl, &holb_cfg);
 	}
@@ -1261,7 +1269,8 @@ int ipa3_request_gsi_channel(struct ipa_request_gsi_channel_params *params,
 	}
 
 	params->chan_params.evt_ring_hdl = ep->gsi_evt_ring_hdl;
-	params->chan_params.ch_id = gsi_ep_cfg_ptr->ipa_gsi_chan_num;
+	if(gsi_ep_cfg_ptr)
+		params->chan_params.ch_id = gsi_ep_cfg_ptr->ipa_gsi_chan_num;
 	gsi_res = gsi_alloc_channel(&params->chan_params, gsi_dev_hdl,
 		&ep->gsi_chan_hdl);
 	if (gsi_res != GSI_STATUS_SUCCESS) {
@@ -1273,8 +1282,9 @@ int ipa3_request_gsi_channel(struct ipa_request_gsi_channel_params *params,
 
 	memcpy(&ep->chan_scratch, &params->chan_scratch,
 		sizeof(union __packed gsi_channel_scratch));
-	ep->chan_scratch.xdci.max_outstanding_tre =
-		params->chan_params.re_size * gsi_ep_cfg_ptr->ipa_if_tlv;
+	if(gsi_ep_cfg_ptr)
+		ep->chan_scratch.xdci.max_outstanding_tre =
+			params->chan_params.re_size * gsi_ep_cfg_ptr->ipa_if_tlv;
 	gsi_res = gsi_write_channel_scratch(ep->gsi_chan_hdl,
 		params->chan_scratch);
 	if (gsi_res != GSI_STATUS_SUCCESS) {

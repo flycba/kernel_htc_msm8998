@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -198,11 +198,15 @@ struct qpnp_lcdb {
 	struct regmap			*regmap;
 	struct pmic_revid_data		*pmic_rev_id;
 	u32				base;
+	u32				wa_flags;
 	int				sc_irq;
 
 	/* TTW params */
 	bool				ttw_enable;
 	bool				ttw_mode_sw;
+
+	/* top level DT params */
+	bool				force_module_reenable;
 
 	/* status parameters */
 	bool				lcdb_enabled;
@@ -263,6 +267,10 @@ enum lcdb_settings_index {
 	LCDB_NCP_PD_CTL,
 	LCDB_NCP_SOFT_START_CTL,
 	LCDB_SETTING_MAX,
+};
+
+enum lcdb_wa_flags {
+	NCP_SCP_DISABLE_WA = BIT(0),
 };
 
 static u32 soft_start_us[] = {
@@ -606,9 +614,7 @@ static int qpnp_lcdb_enable_wa(struct qpnp_lcdb *lcdb)
 		return rc;
 	}
 
-	/* execute the below for rev1.1 */
-	if (lcdb->pmic_rev_id->rev3 == PM660L_V1P1_REV3 &&
-		lcdb->pmic_rev_id->rev4 == PM660L_V1P1_REV4) {
+	if (lcdb->wa_flags & NCP_SCP_DISABLE_WA) {
 		/*
 		 * delay to make sure that the MID pin – ie the
 		 * output of the LCDB boost – returns to 0V
@@ -671,6 +677,23 @@ static int qpnp_lcdb_enable(struct qpnp_lcdb *lcdb)
 	if (rc < 0) {
 		pr_err("Failed to disable lcdb rc= %d\n", rc);
 		goto fail_enable;
+	}
+
+	if (lcdb->force_module_reenable) {
+		val = 0;
+		rc = qpnp_lcdb_write(lcdb, lcdb->base + LCDB_ENABLE_CTL1_REG,
+								&val, 1);
+		if (rc < 0) {
+			pr_err("Failed to enable lcdb rc= %d\n", rc);
+			goto fail_enable;
+		}
+		val = MODULE_EN_BIT;
+		rc = qpnp_lcdb_write(lcdb, lcdb->base + LCDB_ENABLE_CTL1_REG,
+								&val, 1);
+		if (rc < 0) {
+			pr_err("Failed to disable lcdb rc= %d\n", rc);
+			goto fail_enable;
+		}
 	}
 
 	/* poll for vreg_ok */
@@ -1720,10 +1743,26 @@ static int qpnp_lcdb_init_bst(struct qpnp_lcdb *lcdb)
 	return 0;
 }
 
+static void qpnp_lcdb_pmic_config(struct qpnp_lcdb *lcdb)
+{
+	switch (lcdb->pmic_rev_id->pmic_subtype) {
+	case PM660L_SUBTYPE:
+		if (lcdb->pmic_rev_id->rev4 < PM660L_V2P0_REV4)
+			lcdb->wa_flags |= NCP_SCP_DISABLE_WA;
+		break;
+	default:
+		break;
+	}
+
+	pr_debug("LCDB wa_flags = 0x%2x\n", lcdb->wa_flags);
+}
+
 static int qpnp_lcdb_hw_init(struct qpnp_lcdb *lcdb)
 {
 	int rc = 0;
 	u8 val = 0;
+
+	qpnp_lcdb_pmic_config(lcdb);
 
 	rc = qpnp_lcdb_init_bst(lcdb);
 	if (rc < 0) {
@@ -1743,8 +1782,7 @@ static int qpnp_lcdb_hw_init(struct qpnp_lcdb *lcdb)
 		return rc;
 	}
 
-	if (lcdb->sc_irq >= 0 &&
-		lcdb->pmic_rev_id->pmic_subtype != PM660L_SUBTYPE) {
+	if (lcdb->sc_irq >= 0 && !(lcdb->wa_flags & NCP_SCP_DISABLE_WA)) {
 		lcdb->sc_count = 0;
 		rc = devm_request_threaded_irq(lcdb->dev, lcdb->sc_irq,
 				NULL, qpnp_lcdb_sc_irq_handler, IRQF_ONESHOT,
@@ -1827,6 +1865,9 @@ static int qpnp_lcdb_parse_dt(struct qpnp_lcdb *lcdb)
 			return rc;
 		}
 	}
+
+	lcdb->force_module_reenable = of_property_read_bool(node,
+					"qcom,force-module-reenable");
 
 	if (of_property_read_bool(node, "qcom,ttw-enable")) {
 		rc = qpnp_lcdb_parse_ttw(lcdb);

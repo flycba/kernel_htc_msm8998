@@ -159,6 +159,7 @@ config BATTERY_SBS
 
 config BATTERY_BQ27XXX
 	tristate "BQ27xxx battery driver"
+	depends on I2C || I2C=n
 	help
 	  Say Y here to enable support for batteries with BQ27xxx (I2C/HDQ) chips.
 
@@ -519,6 +520,16 @@ config AXP20X_POWER
 	help
 	  This driver provides support for the power supply features of
 	  AXP20x PMIC.
+
+config HTC_BATT
+	bool "htc feature for debug and testing"
+	help
+	  Say Y to enable htc battery debug flag series.
+
+config HTC_USB
+	bool "htc feature for vconn"
+	help
+	  Say Y to enable htc battery debug flag series.
 
 source "drivers/power/reset/Kconfig"
 source "drivers/power/supply/Kconfig"

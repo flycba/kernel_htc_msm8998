@@ -738,6 +738,7 @@ const char * const vmstat_text[] = {
 	"nr_slab_unreclaimable",
 	"nr_page_table_pages",
 	"nr_kernel_stack",
+	"nr_overhead",
 	"nr_unstable",
 	"nr_bounce",
 	"nr_vmscan_write",
@@ -764,6 +765,7 @@ const char * const vmstat_text[] = {
 	"nr_anon_transparent_hugepages",
 	"nr_free_cma",
 	"nr_swapcache",
+	"nr_indirectly_reclaimable",
 
 	/* enum writeback_stat_item counters */
 	"nr_dirty_threshold",
@@ -862,6 +864,9 @@ const char * const vmstat_text[] = {
 #ifdef CONFIG_SMP
 	"nr_tlb_remote_flush",
 	"nr_tlb_remote_flush_received",
+#else
+	"", /* nr_tlb_remote_flush */
+	"", /* nr_tlb_remote_flush_received */
 #endif /* CONFIG_SMP */
 	"nr_tlb_local_flush_all",
 	"nr_tlb_local_flush_one",
@@ -870,7 +875,6 @@ const char * const vmstat_text[] = {
 #ifdef CONFIG_DEBUG_VM_VMACACHE
 	"vmacache_find_calls",
 	"vmacache_find_hits",
-	"vmacache_full_flushes",
 #endif
 #endif /* CONFIG_VM_EVENTS_COUNTERS */
 };
@@ -1349,7 +1353,9 @@ static int vmstat_show(struct seq_file *m, void *arg)
 	unsigned long *l = arg;
 	unsigned long off = l - (unsigned long *)m->private;
 
-	seq_printf(m, "%s %lu\n", vmstat_text[off], *l);
+	seq_puts(m, vmstat_text[off]);
+	seq_put_decimal_ull(m, ' ', *l);
+	seq_putc(m, '\n');
 	return 0;
 }
 
@@ -1550,6 +1556,30 @@ static int vmstat_cpuup_callback(struct notifier_block *nfb,
 
 static struct notifier_block vmstat_notifier =
 	{ &vmstat_cpuup_callback, NULL, 0 };
+#endif
+
+#ifdef CONFIG_VM_EVENT_COUNTERS
+#define NR_START_VM_EVENT              NR_VM_ZONE_STAT_ITEMS + NR_VM_WRITEBACK_STAT_ITEMS
+void dump_vm_events_counter(void)
+{
+	static unsigned long prev_events[NR_VM_EVENT_ITEMS];
+	unsigned long events[NR_VM_EVENT_ITEMS];
+	int i;
+
+	all_vm_events(events);
+	/* sectors -> kbytes */
+	events[PGPGIN] /= 2;
+	events[PGPGOUT] /= 2;
+
+	/* dump increased counters within a certain period of time */
+	for (i = 0; i < NR_VM_EVENT_ITEMS; i++) {
+		if (events[i] - prev_events[i] > 0)
+			pr_info("[K] %s_diff = %lu\n",
+					vmstat_text[i + NR_START_VM_EVENT],
+					events[i] - prev_events[i]);
+	}
+	memcpy(prev_events, events, sizeof(unsigned long) * NR_VM_EVENT_ITEMS);
+}
 #endif
 
 static int __init setup_vmstat(void)
