@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm64 4.4.162 Kernel Configuration
+# Linux/arm64 4.4.164 Kernel Configuration
 #
 CONFIG_ARM64=y
 CONFIG_64BIT=y
@@ -2980,7 +2980,6 @@ CONFIG_QCOM_KGSL=y
 # CONFIG_QCOM_KGSL_CFF_DUMP is not set
 CONFIG_QCOM_ADRENO_DEFAULT_GOVERNOR="msm-adreno-tz"
 CONFIG_QCOM_KGSL_IOMMU=y
-CONFIG_MSM_KGSL_DEFAULT_GPU_HUNG_NO_PANIC=-1
 # CONFIG_DRM is not set
 # CONFIG_MSM_BA_V4L2 is not set
 
